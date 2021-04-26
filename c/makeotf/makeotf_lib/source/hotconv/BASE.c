@@ -143,7 +143,7 @@ static void baseScriptInit(void *ctx, long count, BaseScriptInfo *bsi) {
     hotCtx g = ctx;
     int i;
     for (i = 0; i < count; i++) {
-        dnaINIT(g->dnaCtx, bsi->coordInx, 5, 5);
+        dnaINIT(g->DnaCTX, bsi->coordInx, 5, 5);
         bsi++;
     }
 }
@@ -151,14 +151,14 @@ static void baseScriptInit(void *ctx, long count, BaseScriptInfo *bsi) {
 void BASENew(hotCtx g) {
     BASECtx h = MEM_NEW(g, sizeof(struct BASECtx_));
 
-    dnaINIT(g->dnaCtx, h->horiz.baseline, 5, 5);
-    dnaINIT(g->dnaCtx, h->horiz.script, 10, 10);
-    dnaINIT(g->dnaCtx, h->vert.baseline, 5, 5);
-    dnaINIT(g->dnaCtx, h->vert.script, 10, 10);
+    dnaINIT(g->DnaCTX, h->horiz.baseline, 5, 5);
+    dnaINIT(g->DnaCTX, h->horiz.script, 10, 10);
+    dnaINIT(g->DnaCTX, h->vert.baseline, 5, 5);
+    dnaINIT(g->DnaCTX, h->vert.script, 10, 10);
 
-    dnaINIT(g->dnaCtx, h->baseScript, 10, 10);
+    dnaINIT(g->DnaCTX, h->baseScript, 10, 10);
     h->baseScript.func = baseScriptInit;
-    dnaINIT(g->dnaCtx, h->coord, 10, 20);
+    dnaINIT(g->DnaCTX, h->coord, 10, 20);
 
     /* Link contexts */
     h->g = g;

@@ -33,7 +33,7 @@ static void initCharName(void *ctx, long count, CharName *charname) {
     hotCtx g = ctx;
     long i;
     for (i = 0; i < count; i++) {
-        dnaINIT(g->dnaCtx, *charname, 16, 16);
+        dnaINIT(g->DnaCTX, *charname, 16, 16);
         charname++;
     }
     return;
@@ -108,7 +108,7 @@ hotCtx hotNew(hotCallbacks *hotcb) {
     hot_dna_memcb.manage = hot_manage;
 
     /* Initialize contexts for safe freeing */
-    g->dnaCtx = NULL;
+    g->DnaCTX = NULL;
     g->ctx.cff = NULL;
     g->ctx.tc = NULL;
     g->ctx.map = NULL;
@@ -131,10 +131,10 @@ hotCtx hotNew(hotCallbacks *hotcb) {
     g->ctx.vmtx = NULL;
     g->ctx.VORG = NULL;
 
-    g->dnaCtx = dnaNew(&hot_dna_memcb, DNA_CHECK_ARGS);
-    dnaINIT(g->dnaCtx, g->data, 250, 500);
-    dnaINIT(g->dnaCtx, g->tmp, 250, 500);
-    dnaINIT(g->dnaCtx, g->note, 1024, 1024);
+    g->DnaCTX = dnaNew(&hot_dna_memcb, DNA_CHECK_ARGS);
+    dnaINIT(g->DnaCTX, g->data, 250, 500);
+    dnaINIT(g->DnaCTX, g->tmp, 250, 500);
+    dnaINIT(g->DnaCTX, g->note, 1024, 1024);
 
     /* Initialize font information */
 #if HOT_DEBUG
@@ -144,12 +144,12 @@ hotCtx hotNew(hotCallbacks *hotcb) {
     g->font.fsSelectionMask_on = -1;
     g->font.fsSelectionMask_off = -1;
     g->font.os2Version = 0;
-    dnaINIT(g->dnaCtx, g->font.FontName, 64, 32);
-    dnaINIT(g->dnaCtx, g->font.kern.pairs, 1500, 1000);
-    dnaINIT(g->dnaCtx, g->font.kern.values, 1500, 8500);
-    dnaINIT(g->dnaCtx, g->font.unenc, 30, 70);
+    dnaINIT(g->DnaCTX, g->font.FontName, 64, 32);
+    dnaINIT(g->DnaCTX, g->font.kern.pairs, 1500, 1000);
+    dnaINIT(g->DnaCTX, g->font.kern.values, 1500, 8500);
+    dnaINIT(g->DnaCTX, g->font.unenc, 30, 70);
     g->font.unenc.func = initCharName;
-    dnaINIT(g->dnaCtx, g->font.glyphs, 315, 350);
+    dnaINIT(g->DnaCTX, g->font.glyphs, 315, 350);
 
     initOverrides(g);
 

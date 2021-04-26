@@ -95,8 +95,8 @@ struct STATCtx_ {
 void STATNew(hotCtx g) {
     STATCtx h = MEM_NEW(g, sizeof(struct STATCtx_));
 
-    dnaINIT(g->dnaCtx, h->designAxes, 5, 5);
-    dnaINIT(g->dnaCtx, h->axisValues, 5, 5);
+    dnaINIT(g->DnaCTX, h->designAxes, 5, 5);
+    dnaINIT(g->DnaCTX, h->axisValues, 5, 5);
     h->elidedFallbackNameID = 0;
 
     /* Link contexts */

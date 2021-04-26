@@ -32,7 +32,7 @@ struct VORGCtx_ {
 void VORGNew(hotCtx g) {
     VORGCtx h = MEM_NEW(g, sizeof(struct VORGCtx_));
 
-    dnaINIT(g->dnaCtx, h->tbl.vertOriginYMetrics, 300, 600);
+    dnaINIT(g->DnaCTX, h->tbl.vertOriginYMetrics, 300, 600);
 
     /* Link contexts */
     h->g = g;

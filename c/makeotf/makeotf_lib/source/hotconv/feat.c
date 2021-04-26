@@ -4282,38 +4282,38 @@ void featNew(hotCtx hot) {
 
     h->featFileExists = -1;
 
-    dnaINIT(hot->dnaCtx, h->langSys, 5, 10);
-    dnaINIT(hot->dnaCtx, h->lookup, 7, 20);
+    dnaINIT(hot->DnaCTX, h->langSys, 5, 10);
+    dnaINIT(hot->DnaCTX, h->lookup, 7, 20);
 
-    dnaINIT(hot->dnaCtx, h->stack, 5, 5);
+    dnaINIT(hot->DnaCTX, h->stack, 5, 5);
 
-    dnaINIT(hot->dnaCtx, h->script, 4, 4);
-    dnaINIT(hot->dnaCtx, h->language, 4, 4);
-    dnaINIT(hot->dnaCtx, h->feature, 15, 15);
-    dnaINIT(hot->dnaCtx, h->table, 5, 5);
-    dnaINIT(hot->dnaCtx, h->namedLkp, 5, 20);
-    dnaINIT(hot->dnaCtx, h->DFLTLkps, 5, 20);
+    dnaINIT(hot->DnaCTX, h->script, 4, 4);
+    dnaINIT(hot->DnaCTX, h->language, 4, 4);
+    dnaINIT(hot->DnaCTX, h->feature, 15, 15);
+    dnaINIT(hot->DnaCTX, h->table, 5, 5);
+    dnaINIT(hot->DnaCTX, h->namedLkp, 5, 20);
+    dnaINIT(hot->DnaCTX, h->DFLTLkps, 5, 20);
 
-    dnaINIT(hot->dnaCtx, h->aalt.features, 10, 20);
-    dnaINIT(hot->dnaCtx, h->aalt.usedFeatures, 10, 20);
-    dnaINIT(hot->dnaCtx, h->aalt.rules, 50, 200);
-    dnaINIT(hot->dnaCtx, h->cvParameters.charValues, 10, 10);
+    dnaINIT(hot->DnaCTX, h->aalt.features, 10, 20);
+    dnaINIT(hot->DnaCTX, h->aalt.usedFeatures, 10, 20);
+    dnaINIT(hot->DnaCTX, h->aalt.rules, 50, 200);
+    dnaINIT(hot->DnaCTX, h->cvParameters.charValues, 10, 10);
 
-    dnaINIT(hot->dnaCtx, h->sortTmp, 100, 200);
+    dnaINIT(hot->DnaCTX, h->sortTmp, 100, 200);
 
     hashInit(h);
 
-    dnaINIT(hot->dnaCtx, h->anonData.data, 2000, 4000);
+    dnaINIT(hot->DnaCTX, h->anonData.data, 2000, 4000);
 
     h->returnMode.include = h->returnMode.tag = START;
-    dnaINIT(hot->dnaCtx, h->nameString, 256, 256);
-    dnaINIT(hot->dnaCtx, h->metricsInfo, 4, 10);
-    dnaINIT(hot->dnaCtx, h->anchorMarkInfo, 4, 10);
-    dnaINIT(hot->dnaCtx, h->prod, 100, 2000);
-    dnaINIT(hot->dnaCtx, h->markClasses, 8, 8);
-    dnaINIT(hot->dnaCtx, h->anchorDefs, 8, 8);
-    dnaINIT(hot->dnaCtx, h->valueDefs, 8, 8);
-    dnaINIT(hot->dnaCtx, h->ligCaretValues, 10, 10);
+    dnaINIT(hot->DnaCTX, h->nameString, 256, 256);
+    dnaINIT(hot->DnaCTX, h->metricsInfo, 4, 10);
+    dnaINIT(hot->DnaCTX, h->anchorMarkInfo, 4, 10);
+    dnaINIT(hot->DnaCTX, h->prod, 100, 2000);
+    dnaINIT(hot->DnaCTX, h->markClasses, 8, 8);
+    dnaINIT(hot->DnaCTX, h->anchorDefs, 8, 8);
+    dnaINIT(hot->DnaCTX, h->valueDefs, 8, 8);
+    dnaINIT(hot->DnaCTX, h->ligCaretValues, 10, 10);
 
 #endif /* HOT_FEAT_SUPPORT */
 

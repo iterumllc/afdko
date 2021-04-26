@@ -38,8 +38,8 @@ struct vmtxCtx_ {
 void vmtxNew(hotCtx g) {
     vmtxCtx h = MEM_NEW(g, sizeof(struct vmtxCtx_));
 
-    dnaINIT(g->dnaCtx, h->tbl.vMetrics, 14000, 14000);
-    dnaINIT(g->dnaCtx, h->tbl.topSideBearing, 14000, 14000);
+    dnaINIT(g->DnaCTX, h->tbl.vMetrics, 14000, 14000);
+    dnaINIT(g->DnaCTX, h->tbl.topSideBearing, 14000, 14000);
 
     /* Link contexts */
     h->g = g;

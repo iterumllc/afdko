@@ -328,7 +328,7 @@ typedef struct { /* Font information */
 
 /* -------------------------------- Contexts ------------------------------- */
 typedef struct mapCtx_ *mapCtx;
-typedef struct featCtx_ *featCtx;
+typedef void *featCtx;
 typedef struct otlCtx_ *otlCtx;
 typedef struct BASECtx_ *BASECtx;
 typedef struct CFF_Ctx_ *CFF_Ctx;
@@ -384,7 +384,7 @@ struct hotCtx_ {
         vheaCtx vhea;
         vmtxCtx vmtx;
     } ctx;
-    dnaCtx dnaCtx;
+    dnaCtx DnaCTX;
     dnaDCL(char, data); /* CFF data object buffer */
     dnaDCL(char, tmp);  /* Temporary conversion buffer */
     dnaDCL(char, note); /* Buffer for accumulated messages */

@@ -239,10 +239,10 @@ void nameNew(hotCtx g) {
     nameCtx h = MEM_NEW(g, sizeof(struct nameCtx_));
 
     h->userNameId = 256;
-    dnaINIT(g->dnaCtx, h->tmp, 250, 250);
-    dnaINIT(g->dnaCtx, h->addstrs, 1000, 1000);
-    dnaINIT(g->dnaCtx, h->tbl.record, 50, 20);
-    dnaINIT(g->dnaCtx, h->tbl.strings, 1000, 1000);
+    dnaINIT(g->DnaCTX, h->tmp, 250, 250);
+    dnaINIT(g->DnaCTX, h->addstrs, 1000, 1000);
+    dnaINIT(g->DnaCTX, h->tbl.record, 50, 20);
+    dnaINIT(g->DnaCTX, h->tbl.strings, 1000, 1000);
 
     /* Link contexts */
     h->g = g;

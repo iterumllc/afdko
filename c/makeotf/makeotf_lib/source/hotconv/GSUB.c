@@ -185,7 +185,7 @@ static void subtableInit(void *ctx, long count, SubtableInfo *si) {
     hotCtx g = ctx;
     long i;
     for (i = 0; i < count; i++) {
-        dnaINIT(g->dnaCtx, si->rules, 10, 50);
+        dnaINIT(g->DnaCTX, si->rules, 10, 50);
         si++;
     }
     return;
@@ -196,15 +196,15 @@ void GSUBNew(hotCtx g) {
 
     h->new.script = h->new.language = h->new.feature = TAG_UNDEF;
 
-    dnaINIT(g->dnaCtx, h->new.rules, 50, 200);
+    dnaINIT(g->DnaCTX, h->new.rules, 50, 200);
     h->offset.featParam = h->offset.subtable = 0;
     h->offset.extension = h->offset.extensionSection = 0;
-    dnaINIT(g->dnaCtx, h->subtables, 10, 10);
-    dnaINIT(g->dnaCtx, h->anonSubtable, 3, 10);
+    dnaINIT(g->DnaCTX, h->subtables, 10, 10);
+    dnaINIT(g->DnaCTX, h->anonSubtable, 3, 10);
     h->anonSubtable.func = subtableInit;
-    dnaINIT(g->dnaCtx, h->subLookup, 25, 100);
-    dnaINIT(g->dnaCtx, h->prod, 20, 100);
-    dnaINIT(g->dnaCtx, h->featNameID, 8, 8);
+    dnaINIT(g->DnaCTX, h->subLookup, 25, 100);
+    dnaINIT(g->DnaCTX, h->prod, 20, 100);
+    dnaINIT(g->DnaCTX, h->featNameID, 8, 8);
 
     h->maxContext = 0;
     h->otl = NULL;
@@ -954,7 +954,7 @@ void GSUBAddCVParam(hotCtx g, void *param) {
     new_param->NumNamedParameters = feat_param->NumNamedParameters;
     new_param->FirstParamUILabelNameID = feat_param->FirstParamUILabelNameID;
 
-    dnaINIT(g->dnaCtx, new_param->charValues, 20, 20);
+    dnaINIT(g->DnaCTX, new_param->charValues, 20, 20);
     i = 0;
     while (i < feat_param->charValues.cnt) {
         *dnaNEXT(new_param->charValues) = feat_param->charValues.array[i++];

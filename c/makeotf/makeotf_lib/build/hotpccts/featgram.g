@@ -1824,7 +1824,7 @@ baseScript[int vert, long nTag]
 	:	<<
 		int num;
 	dnaDCL(short, coord);
-	dnaINIT(g->dnaCtx, coord, 5, 5);
+	dnaINIT(g->DnaCTX, coord, 5, 5);
 		>>
 
 		s:T_TAG <<zzmode(TAG_MODE);>>
@@ -1846,7 +1846,7 @@ axisSpecs
 	:	<<
 		int vert = 0;
 		dnaDCL(Tag, tagList);
-		dnaINIT(g->dnaCtx, tagList, 5, 5);
+		dnaINIT(g->DnaCTX, tagList, 5, 5);
 		>>
 
 		(K_HorizAxis_BaseTagList | K_VertAxis_BaseTagList <<vert = 1;>>)
@@ -2037,8 +2037,8 @@ axisValue
 		Fixed value, min, max;
 		Tag axisTag;
 		h->featNameID = 0;
-		dnaINIT(g->dnaCtx, axisTags, 1, 5);
-		dnaINIT(g->dnaCtx, values, 1, 5);
+		dnaINIT(g->DnaCTX, axisTags, 1, 5);
+		dnaINIT(g->DnaCTX, values, 1, 5);
 		>>
 		K_AxisValue
 		"\{"

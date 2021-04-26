@@ -26,7 +26,7 @@ struct anonCtx_ {
 void anonNew(hotCtx g) {
     anonCtx h = MEM_NEW(g, sizeof(struct anonCtx_));
 
-    dnaINIT(g->dnaCtx, h->tbls, 5, 5);
+    dnaINIT(g->DnaCTX, h->tbls, 5, 5);
     h->iTbl = 0;
 
     /* Link contexts */

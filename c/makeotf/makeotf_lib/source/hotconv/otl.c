@@ -413,7 +413,7 @@ static void coverageRecordInit(void *ctx, long count, CoverageRecord *rec) {
     hotCtx g = ctx;
     long i;
     for (i = 0; i < count; i++) {
-        dnaINIT(g->dnaCtx, rec->glyph, 50, 50);
+        dnaINIT(g->DnaCTX, rec->glyph, 50, 50);
         rec++;
     }
     return;
@@ -422,7 +422,7 @@ static void coverageRecordInit(void *ctx, long count, CoverageRecord *rec) {
 /* Initialize coverage tables */
 static void coverageNew(hotCtx g, otlTbl t) {
     t->coverage.offset = 0;
-    dnaINIT(g->dnaCtx, t->coverage.tables, 10, 5);
+    dnaINIT(g->DnaCTX, t->coverage.tables, 10, 5);
     t->coverage.tables.func = coverageRecordInit;
 }
 
@@ -716,7 +716,7 @@ static void classRecordInit(void *ctx, long count, ClassRecord *rec) {
     hotCtx g = ctx;
     long i;
     for (i = 0; i < count; i++) {
-        dnaINIT(g->dnaCtx, rec->map, 50, 50);
+        dnaINIT(g->DnaCTX, rec->map, 50, 50);
         rec++;
     }
     return;
@@ -724,7 +724,7 @@ static void classRecordInit(void *ctx, long count, ClassRecord *rec) {
 
 static void classNew(hotCtx g, otlTbl t) {
     t->class.offset = 0;
-    dnaINIT(g->dnaCtx, t->class.tables, 10, 5);
+    dnaINIT(g->DnaCTX, t->class.tables, 10, 5);
     t->class.tables.func = classRecordInit;
 }
 
@@ -1007,9 +1007,9 @@ Offset otlClassEnd(hotCtx g, otlTbl t) {
 otlTbl otlTableNew(hotCtx g) {
     otlTbl t = MEM_NEW(g, sizeof(struct otlTbl_));
 
-    dnaINIT(g->dnaCtx, t->subtable, 10, 5);
-    dnaINIT(g->dnaCtx, t->label, 50, 100);
-    dnaINIT(g->dnaCtx, t->refLabel, 50, 100);
+    dnaINIT(g->DnaCTX, t->subtable, 10, 5);
+    dnaINIT(g->DnaCTX, t->label, 50, 100);
+    dnaINIT(g->DnaCTX, t->refLabel, 50, 100);
 
 #if HOT_DEBUG
     t->subtable.func = initSubtable;

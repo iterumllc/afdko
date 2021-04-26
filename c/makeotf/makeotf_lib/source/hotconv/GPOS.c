@@ -307,11 +307,11 @@ static void anonSubtableInit(void *ctx, long count, SubtableInfo *si) {
     hotCtx g = ctx;
     long i;
     for (i = 0; i < count; i++) {
-        dnaINIT(g->dnaCtx, si->rules, 50, 50);
-        dnaINIT(g->dnaCtx, si->single, 500, 1000);
-        dnaINIT(g->dnaCtx, si->markClassList, 8, 8);
-        dnaINIT(g->dnaCtx, si->baseList, 300, 300);
-        dnaINIT(g->dnaCtx, si->pairs, 1000, 500);
+        dnaINIT(g->DnaCTX, si->rules, 50, 50);
+        dnaINIT(g->DnaCTX, si->single, 500, 1000);
+        dnaINIT(g->DnaCTX, si->markClassList, 8, 8);
+        dnaINIT(g->DnaCTX, si->baseList, 300, 300);
+        dnaINIT(g->DnaCTX, si->pairs, 1000, 500);
 #if HOT_DEBUG
         si->single.func = initSingle;
 #endif
@@ -326,28 +326,28 @@ void GPOSNew(hotCtx g) {
     h->new.script = h->new.language = h->new.feature = TAG_UNDEF;
     h->new.fileName = NULL;
 
-    dnaINIT(g->dnaCtx, h->new.rules, 50, 200);
-    dnaINIT(g->dnaCtx, h->new.single, 500, 1000);
-    dnaINIT(g->dnaCtx, h->new.markClassList, 8, 8);
-    dnaINIT(g->dnaCtx, h->new.baseList, 300, 300);
-    dnaINIT(g->dnaCtx, h->new.pairs, 1000, 500);
+    dnaINIT(g->DnaCTX, h->new.rules, 50, 200);
+    dnaINIT(g->DnaCTX, h->new.single, 500, 1000);
+    dnaINIT(g->DnaCTX, h->new.markClassList, 8, 8);
+    dnaINIT(g->DnaCTX, h->new.baseList, 300, 300);
+    dnaINIT(g->DnaCTX, h->new.pairs, 1000, 500);
 #if HOT_DEBUG
     h->new.single.func = initSingle;
 #endif
     h->offset.subtable = h->offset.featParam = 0;
     h->offset.extension = h->offset.extensionSection = 0;
-    dnaINIT(g->dnaCtx, h->values, 1000, 500);
-    dnaINIT(g->dnaCtx, h->subtables, 10, 10);
-    dnaINIT(g->dnaCtx, h->anonSubtable, 3, 10);
+    dnaINIT(g->DnaCTX, h->values, 1000, 500);
+    dnaINIT(g->DnaCTX, h->subtables, 10, 10);
+    dnaINIT(g->DnaCTX, h->anonSubtable, 3, 10);
     h->anonSubtable.func = anonSubtableInit;
-    dnaINIT(g->dnaCtx, h->posLookup, 25, 100);
-    dnaINIT(g->dnaCtx, h->prod, 20, 100);
+    dnaINIT(g->DnaCTX, h->posLookup, 25, 100);
+    dnaINIT(g->DnaCTX, h->prod, 20, 100);
 
     h->startNewPairPosSubtbl = 0;
-    dnaINIT(g->dnaCtx, h->classDef[0].classInfo, 200, 500);
-    dnaINIT(g->dnaCtx, h->classDef[0].cov, 50, 100);
-    dnaINIT(g->dnaCtx, h->classDef[1].classInfo, 200, 500);
-    dnaINIT(g->dnaCtx, h->classDef[1].cov, 50, 100);
+    dnaINIT(g->DnaCTX, h->classDef[0].classInfo, 200, 500);
+    dnaINIT(g->DnaCTX, h->classDef[0].cov, 50, 100);
+    dnaINIT(g->DnaCTX, h->classDef[1].classInfo, 200, 500);
+    dnaINIT(g->DnaCTX, h->classDef[1].cov, 50, 100);
 
     h->featNameID = 0;
     h->maxContext = 0;
@@ -3820,7 +3820,7 @@ static void GPOSAddMark(hotCtx g, SubtableInfo *si, GNode *targ, int anchorCount
 
             if (prevComponentIndex != anchorMarkInfo[j].componentIndex) {
                 baseRec = dnaNEXT(si->baseList);
-                dnaINIT(g->dnaCtx, baseRec->anchorMarkInfo, 4, 4);
+                dnaINIT(g->DnaCTX, baseRec->anchorMarkInfo, 4, 4);
                 baseRec->anchorMarkInfo.func = initAnchorArray;
                 baseRec->gid = nextNode->gid;
                 baseRec->lineNum = lineNum;
@@ -3858,7 +3858,7 @@ static void fillMarkToBase(hotCtx g, GPOSCtx h) {
 
     fmt->PosFormat = 1;
     fmt->ClassCount = (unsigned short)h->new.markClassList.cnt;
-    dnaINIT(g->dnaCtx, fmt->anchorList, 100, 100);
+    dnaINIT(g->DnaCTX, fmt->anchorList, 100, 100);
     fmt->anchorList.func = initAnchorListRec;
 
     /* Build mark coverage list from list of mark classes. Each mark class  */
@@ -4117,7 +4117,7 @@ static void fillMarkToLigature(hotCtx g, GPOSCtx h) {
 
     fmt->PosFormat = 1;
     fmt->ClassCount = (unsigned short)h->new.markClassList.cnt;
-    dnaINIT(g->dnaCtx, fmt->anchorList, 100, 100);
+    dnaINIT(g->DnaCTX, fmt->anchorList, 100, 100);
     fmt->anchorList.func = initAnchorListRec;
 
     /* Build mark coverage list from list of mark classes. Each mark class  */
@@ -4384,7 +4384,7 @@ static void GPOSAdCursive(hotCtx g, SubtableInfo *si, GNode *targ, int anchorCou
     while (nextNode != NULL) {
         int j;
         BaseGlyphRec *baseRec = dnaNEXT(si->baseList);
-        dnaINIT(g->dnaCtx, baseRec->anchorMarkInfo, 4, 4);
+        dnaINIT(g->DnaCTX, baseRec->anchorMarkInfo, 4, 4);
         baseRec->anchorMarkInfo.func = initAnchorArray;
         baseRec->gid = nextNode->gid;
 
@@ -4410,7 +4410,7 @@ static void fillCursive(hotCtx g, GPOSCtx h) {
     otl = sub->extension.use ? sub->extension.otl : h->otl;
 
     fmt->PosFormat = 1;
-    dnaINIT(g->dnaCtx, fmt->anchorList, 100, 100);
+    dnaINIT(g->DnaCTX, fmt->anchorList, 100, 100);
     fmt->anchorList.func = initAnchorListRec;
     qsort(h->new.baseList.array, h->new.baseList.cnt, sizeof(BaseGlyphRec), cmpBaseRec); /* Get them in GID order, so the recs will match the Coverage order */
     {

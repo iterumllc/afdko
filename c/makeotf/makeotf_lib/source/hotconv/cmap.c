@@ -221,10 +221,10 @@ void cmapNew(hotCtx g) {
 
     h->tbl.nEncodings = 0;
     h->lastUVS = 0;
-    dnaINIT(g->dnaCtx, h->tbl.encoding, 5, 2);
-    dnaINIT(g->dnaCtx, h->uvsList, 40, 40);
-    dnaINIT(g->dnaCtx, h->mapping, 9000, 2000);
-    dnaINIT(g->dnaCtx, h->codespace, 5, 10);
+    dnaINIT(g->DnaCTX, h->tbl.encoding, 5, 2);
+    dnaINIT(g->DnaCTX, h->uvsList, 40, 40);
+    dnaINIT(g->DnaCTX, h->mapping, 9000, 2000);
+    dnaINIT(g->DnaCTX, h->codespace, 5, 10);
 
     /* Link contexts */
     h->g = g;
@@ -371,8 +371,8 @@ void cmapAddUVSEntry(hotCtx g, unsigned int uvsFlags, unsigned long uv, unsigned
 
     if (h->lastUVS != uvs) {
         uvsRec = dnaNEXT(h->uvsList);
-        dnaINIT(g->dnaCtx, uvsRec->dfltUVS, 1000, 1000);
-        dnaINIT(g->dnaCtx, uvsRec->extUVS, 1000, 1000);
+        dnaINIT(g->DnaCTX, uvsRec->dfltUVS, 1000, 1000);
+        dnaINIT(g->DnaCTX, uvsRec->extUVS, 1000, 1000);
         h->lastUVS = uvsRec->uvs = uvs;
     } else {
         uvsRec = dnaINDEX(h->uvsList, h->uvsList.cnt - 1);
@@ -650,8 +650,8 @@ static Format2 *makeFormat2(cmapCtx h) {
     Mapping *mapping = h->mapping.array;
     Format2 *fmt = MEM_NEW(h->g, sizeof(Format2));
 
-    dnaINIT(h->g->dnaCtx, fmt->segment, 128, 32);
-    dnaINIT(h->g->dnaCtx, fmt->glyphId, 2000, 500);
+    dnaINIT(h->g->DnaCTX, fmt->segment, 128, 32);
+    dnaINIT(h->g->DnaCTX, fmt->glyphId, 2000, 500);
     fmt->glyphId.func = glyphIdInit;
 
     partitionSegments(h);
@@ -856,7 +856,7 @@ static Format4 *makeFormat4(cmapCtx h, unsigned long *length) {
 
     Mapping *mapping = h->mapping.array;
     Format4 *fmt = MEM_NEW(h->g, sizeof(Format4));
-    dnaINIT(h->g->dnaCtx, fmt->glyphId, 256, 64);
+    dnaINIT(h->g->DnaCTX, fmt->glyphId, 256, 64);
 
     if (g->convertFlags & HOT_STUB_CMAP4)
         truncateCmap = 1;
@@ -957,7 +957,7 @@ static Format12 *makeFormat12(cmapCtx h, unsigned long *length) {
     long iSegBeg = 0; /* Index of beginning of segment */
     Format12 *fmt = MEM_NEW(h->g, sizeof(Format12));
 
-    dnaINIT(h->g->dnaCtx, fmt->segment, 40, 80); /* xxx dynamic numbers? */
+    dnaINIT(h->g->DnaCTX, fmt->segment, 40, 80); /* xxx dynamic numbers? */
 
     for (i = 1; i <= h->mapping.cnt; i++) {
         if (i == h->mapping.cnt || mapping[i].code != mapping[i - 1].code + 1 || mapping[i].glyphId != mapping[i - 1].glyphId + 1) {

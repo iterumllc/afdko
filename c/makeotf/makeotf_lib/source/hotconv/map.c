@@ -306,7 +306,7 @@ static void mapInit(hotCtx g);
 void mapNew(hotCtx g) {
     mapCtx h = MEM_NEW(g, sizeof(struct mapCtx_));
 
-    dnaINIT(g->dnaCtx, h->ps.buf, 35000, 50000); /* ? xxx */
+    dnaINIT(g->DnaCTX, h->ps.buf, 35000, 50000); /* ? xxx */
     h->ps.cb.ctx = g->cb.ctx;
     h->ps.cb.fatal = g->cb.fatal;
     h->ps.cb.malloc = g->cb.malloc;
@@ -314,20 +314,20 @@ void mapNew(hotCtx g) {
     h->ps.cb.buf = &h->ps.buf;
     h->ps.cb.message = g->cb.message;
 
-    dnaINIT(g->dnaCtx, h->cid.hor.range, 6970, 2000); /* Optimized for UniJIS-UCS2-[HV] */
-    dnaINIT(g->dnaCtx, h->cid.ver.map, 180, 180);
-    dnaINIT(g->dnaCtx, h->cid.mac.codespace, 5, 10);
-    dnaINIT(g->dnaCtx, h->cid.mac.range, 225, 225); /* Optimized for 83pv-RKSJ-H */
+    dnaINIT(g->DnaCTX, h->cid.hor.range, 6970, 2000); /* Optimized for UniJIS-UCS2-[HV] */
+    dnaINIT(g->DnaCTX, h->cid.ver.map, 180, 180);
+    dnaINIT(g->DnaCTX, h->cid.mac.codespace, 5, 10);
+    dnaINIT(g->DnaCTX, h->cid.mac.range, 225, 225); /* Optimized for 83pv-RKSJ-H */
 
     h->cid.hor.name = SINX_UNDEF;
     h->cid.ver.name = SINX_UNDEF;
     h->cid.mac.name = SINX_UNDEF;
 
-    dnaINIT(g->dnaCtx, h->uvs.entries, 15000, 500); /* Optimized for 83pv-RKSJ-H */
+    dnaINIT(g->DnaCTX, h->uvs.entries, 15000, 500); /* Optimized for 83pv-RKSJ-H */
 
-    dnaINIT(g->dnaCtx, h->sort.gname, 400, 7000);
-    dnaINIT(g->dnaCtx, h->sort.uv, 400, 6000);
-    dnaINIT(g->dnaCtx, h->sort.glyphAddlUV, 10, 60);
+    dnaINIT(g->DnaCTX, h->sort.gname, 400, 7000);
+    dnaINIT(g->DnaCTX, h->sort.uv, 400, 6000);
+    dnaINIT(g->DnaCTX, h->sort.glyphAddlUV, 10, 60);
     h->sort.firstAddlUV = UV_UNDEF;
     h->sort.lastAddlUV = 0;
     h->sort.nAddlUV = 0;
@@ -336,7 +336,7 @@ void mapNew(hotCtx g) {
     h->minBmpUV = LONG_MAX;
     h->maxBmpUV = LONG_MIN;
 
-    dnaINIT(g->dnaCtx, h->str, 2400, 3600);
+    dnaINIT(g->DnaCTX, h->str, 2400, 3600);
 
     /* Link contexts */
     h->g = g;
@@ -835,7 +835,7 @@ static void readRange(hotCtx g, psToken *last, char rangeType, int *isMac,
 
         if (codespace) {
             if (i == 0) {
-                dnaINIT(g->dnaCtx, tmpCodespace, 5, 10);
+                dnaINIT(g->DnaCTX, tmpCodespace, 5, 10);
             }
             if (*isMac != 1) {
                 *isMac = (loLength == 1);
@@ -2280,7 +2280,7 @@ static void AFMPrintCharMetrics(hotCtx g) {
         /* Caution: multiply encoded glyphs             */
         long nGlyphs = g->font.glyphs.cnt;
         dnaDCL(AFMChar, chars);
-        dnaINIT(g->dnaCtx, chars, 400, 7000);
+        dnaINIT(g->DnaCTX, chars, 400, 7000);
 
         for (i = 1; i < nGlyphs; i++) {
             cffSupCode *sup;
@@ -2344,7 +2344,7 @@ static void AFMPrintKernData(hotCtx g) {
     int i;
     int nPairs = g->font.kern.pairs.cnt;
     dnaDCL(KernNamePair, pairs);
-    dnaINIT(g->dnaCtx, pairs, 1500, 1000);
+    dnaINIT(g->DnaCTX, pairs, 1500, 1000);
 
     if (nPairs == 0) {
         return;

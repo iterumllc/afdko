@@ -33,11 +33,14 @@ PRG_LIBS = $(addprefix $(CT_LIB_DIR)/,$(CT_LIBS)) \
 
 PRG_CXX_TARGET = $(EXE_DIR)/makeotfexe
 
+
 # Build targets
 TARGETS = $(PRG_CXX_TARGET)
 
 # Standard definitions
 include ../../../../../public/config/linux/gcc/gcc.mak
+
+$(EXE_DIR)/makeotfexe : CXXFLAGS = $(STD_OPTS) -lantlr4-runtime -g
 
 # program rule is in gcc.mak
 

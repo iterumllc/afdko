@@ -28,7 +28,7 @@ CXXFLAGS = $(STD_OPTS) $(INC_FLAGS) -DHOT_FEAT_SUPPORT=1 -std=c++11
 
 # PARSE_OBJS = featerr.o featgram.o featscan.o
 
-PARSE_OBJS = FeaLexer.o FeaParser.o FeaParserVisitor.o FeaParserBaseVisitor.o HotFeatureParser.o
+PARSE_OBJS = FeaLexer.o FeaParser.o FeaParserVisitor.o FeaParserBaseVisitor.o HotFeatureVisitor.o
 
 OBJS = anon.o BASE.o CFF_.o cmap.o $(PARSE_OBJS) \
        GDEF.o GPOS.o GSUB.o head.o hhea.o hmtx.o hot.o map.o maxp.o \

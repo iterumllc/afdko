@@ -1248,7 +1248,7 @@ GNode *featSetNewNode(hotCtx g, GID gid) {
 #if HOT_FEAT_SUPPORT
 /* Gets length of pattern sequence (ignores any classes) */
 
-unsigned featGetPatternLen(hotCtx g, GNode *pat) {
+unsigned int featGetPatternLen(hotCtx g, GNode *pat) {
     unsigned len = 0;
     for (; pat != NULL; pat = pat->nextSeq) {
         len++;

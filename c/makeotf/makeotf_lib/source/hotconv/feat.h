@@ -132,7 +132,7 @@ int featGetGlyphClassCount(hotCtx g, GNode *gc);
 
 #if HOT_FEAT_SUPPORT
 
-unsigned featGetPatternLen(hotCtx g, GNode *pat);
+unsigned int featGetPatternLen(hotCtx g, GNode *pat);
 void featGlyphClassSort(hotCtx g, GNode **list, int unique, int reportDups);
 GNode ***featMakeCrossProduct(hotCtx g, GNode *pat, unsigned *n);
 

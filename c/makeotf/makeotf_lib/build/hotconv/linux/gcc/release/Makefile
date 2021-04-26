@@ -24,10 +24,12 @@ INC_FLAGS = -I$(ROOT_DIR)/api \
 
 CFLAGS = $(STD_OPTS) $(INC_FLAGS) -DHOT_FEAT_SUPPORT=1
 CXXFLAGS = $(STD_OPTS) $(INC_FLAGS) -DHOT_FEAT_SUPPORT=1
-					 
-OBJS = anon.o BASE.o CFF_.o cmap.o featerr.o featgram.o featscan.o \
+
+PARSE_OBJS = featerr.o featgram.o featscan.o
+
+OBJS = anon.o BASE.o CFF_.o cmap.o $(PARSE_OBJS) \
        GDEF.o GPOS.o GSUB.o head.o hhea.o hmtx.o hot.o map.o maxp.o \
-       name.o OS_2.o otl.o post.o sfnt.o STAT.o vhea.o vmtx.o VORG.o
+       name.o OS_2.o otl.o post.o sfnt.o STAT.o vhea.o vmtx.o VORG.o tst.o
 
 LIB_OBJS = $(addprefix $(OBJECT_DIR)/,$(OBJS))
 

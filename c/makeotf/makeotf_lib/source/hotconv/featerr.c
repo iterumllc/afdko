@@ -23,7 +23,7 @@
 #include <math.h>
 
 #include "common.h"
-#include "feat.h"
+#include "featpriv_c.h"
 #include "OS_2.h"
 #include "hhea.h"
 #include "vmtx.h"

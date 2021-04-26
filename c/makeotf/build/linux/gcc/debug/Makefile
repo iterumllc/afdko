@@ -10,46 +10,31 @@ CONFIG = debug
 ROOT_DIR = ../../../..
 OBJECT_DIR = .
 LIB_DIR = $(ROOT_DIR)/makeotf_lib/lib/$(PLATFORM)/$(CONFIG)
+LIB_BUILD_DIR = $(ROOT_DIR)/makeotf_lib/build
 CT_LIB_DIR = $(ROOT_DIR)/../public/lib/lib/$(PLATFORM)/$(CONFIG)
+CT_LIB_BUILD_DIR = $(ROOT_DIR)/../public/lib/build
 
-CFLAGS = $(STD_OPTS)  \
-				-I$(ROOT_DIR)/source/include_files \
+INC_FLAGS =                     -I$(ROOT_DIR)/source/include_files \
 				-I$(ROOT_DIR)/makeotf_lib/api \
-				-I$(ROOT_DIR)/makeotf_lib/resource \
-				-I$(ROOT_DIR)/.../public/lib/api 
-				-DMAKEOTFLIB_EXPORTS=1 \
-				-g
+				-I$(ROOT_DIR)/makeotf_lib/resource
 
+CFLAGS = $(STD_OPTS) $(INC_FLAGS) -DMAKEOTFLIB_EXPORTS=1 -g
+CXXFLAGS = $(STD_OPTS) $(INC_FLAGS) -DMAKEOTFLIB_EXPORTS=1 -g
 
-# Program
-PRG_SRCS = \
-	$(SRC_DIR)/cb.c \
-	$(SRC_DIR)/cbpriv.c \
-	$(SRC_DIR)/fcdb.c \
-	$(SRC_DIR)/file.c \
-	$(SRC_DIR)/mac/mac.c \
-	$(SRC_DIR)/main.c
+OBJS = cb.o cbpriv.o c_main.o fcdb.o file.o mac.o main.o
 
-PRG_OBJS = \
-	$(OBJECT_DIR)/cb.o \
-	$(OBJECT_DIR)/cbpriv.o \
-	$(OBJECT_DIR)/fcdb.o \
-	$(OBJECT_DIR)/file.o \
-	$(OBJECT_DIR)/mac.o \
-	$(OBJECT_DIR)/main.o
+CT_LIBS = ctutil.a dynarr.a
+LIBS = hotconv.a pstoken.a typecomp.a cffread.a
 
-PRG_LIBS = \
-		$(CT_LIB_DIR)/ctutil.a \
-		$(CT_LIB_DIR)/dynarr.a \
-		$(LIB_DIR)/hotconv.a \
-		$(LIB_DIR)/pstoken.a \
-		$(LIB_DIR)/typecomp.a \
-		$(LIB_DIR)/cffread.a
+PRG_OBJS = $(addprefix $(OBJECT_DIR)/,$(OBJS))
 
-PRG_TARGET = $(EXE_DIR)/makeotfexe
+PRG_LIBS = $(addprefix $(CT_LIB_DIR)/,$(CT_LIBS)) \
+           $(addprefix $(LIB_DIR)/,$(LIBS))
+
+PRG_CXX_TARGET = $(EXE_DIR)/makeotfexe
 
 # Build targets
-TARGETS = $(PRG_TARGET)
+TARGETS = $(PRG_CXX_TARGET)
 
 # Standard definitions
 include ../../../../../public/config/linux/gcc/gcc.mak
@@ -58,43 +43,21 @@ include ../../../../../public/config/linux/gcc/gcc.mak
 
 # Object rules
 
-$(OBJECT_DIR)/cb.o:
-	$(CC) $(CFLAGS) -c $(SRC_DIR)/cb.c -o $@
+$(OBJECT_DIR)/%.o: $(SRC_DIR)/%.c
+	$(CC) $(CFLAGS) -c $< -o $@
 
-$(OBJECT_DIR)/cbpriv.o:
-	$(CC) $(CFLAGS) -c $(SRC_DIR)/cbpriv.c -o $@
-
-$(OBJECT_DIR)/fcdb.o:
-	$(CC) $(CFLAGS) -c $(SRC_DIR)/fcdb.c -o $@
-
-$(OBJECT_DIR)/file.o:
-	$(CC) $(CFLAGS) -c $(SRC_DIR)/file.c -o $@
-
-$(OBJECT_DIR)/mac.o:
-	$(CC) $(CFLAGS) -c $(SRC_DIR)/mac/mac.c -o $@
-
-$(OBJECT_DIR)/main.o:
-	$(CC) $(CFLAGS) -c $(SRC_DIR)/main.c -o $@
+$(OBJECT_DIR)/%.o: $(SRC_DIR)/%.cpp
+	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 # Lib rules
-CT_LIB_BUILD_DIR = $(ROOT_DIR)/../public/lib/build
-LIB_BUILD_DIR = $(ROOT_DIR)/makeotf_lib/build
+#
+$(CT_LIB_DIR)/%.a: LB_DIR = $(CT_LIB_BUILD_DIR)
+$(LIB_DIR)/%.a: LB_DIR = $(LIB_BUILD_DIR)
 
-$(CT_LIB_DIR)/ctutil.a:
-	cd $(CT_LIB_BUILD_DIR)/ctutil/$(PLATFORM)/$(COMPILER)/$(CONFIG); $(MAKE) clean; $(MAKE);
+CLEAN_TOPS = $(addprefix $(CT_LIB_BUILD_DIR)/,$(basename $(CT_LIBS))) \
+             $(addprefix $(LIB_BUILD_DIR)/,$(basename $(LIBS)))
 
-$(CT_LIB_DIR)/dynarr.a:
-	cd $(CT_LIB_BUILD_DIR)/dynarr/$(PLATFORM)/$(COMPILER)/$(CONFIG); $(MAKE) clean; $(MAKE);
+CLEAN_DIRS = $(addsuffix /$(PLATFORM)/$(COMPILER)/$(CONFIG), $(CLEAN_TOPS))
 
-$(LIB_DIR)/hotconv.a:
-	cd $(LIB_BUILD_DIR)/hotconv/$(PLATFORM)/$(COMPILER)/$(CONFIG); $(MAKE) clean; $(MAKE);
-
-$(LIB_DIR)/pstoken.a:
-	cd $(LIB_BUILD_DIR)/pstoken/$(PLATFORM)/$(COMPILER)/$(CONFIG); $(MAKE) clean; $(MAKE);
-
-$(LIB_DIR)/typecomp.a:
-	cd $(LIB_BUILD_DIR)/typecomp/$(PLATFORM)/$(COMPILER)/$(CONFIG); $(MAKE) clean; $(MAKE);
-
-$(LIB_DIR)/cffread.a:
-	cd $(LIB_BUILD_DIR)/cffread/$(PLATFORM)/$(COMPILER)/$(CONFIG); $(MAKE) clean; $(MAKE);
-
+%.a:
+	$(MAKE) -C $(LB_DIR)/$(*F)/$(PLATFORM)/$(COMPILER)/$(CONFIG)

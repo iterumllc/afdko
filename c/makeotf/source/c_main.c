@@ -823,7 +823,7 @@ static void *cb_manage(ctlMemoryCallbacks *cb, void *old, size_t size) {
 }
 
 /* Main program */
-int main(int argc, char *argv[]) {
+int c_main(int argc, char *argv[]) {
     dnaCtx mainDnaCtx = NULL;
     long value;
 

@@ -8,6 +8,10 @@
 #include "common.h"
 #include "feat.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /* Module-wide functions */
 void otlNew(hotCtx g);
 void otlFree(hotCtx g);
@@ -98,5 +102,9 @@ void otlDeviceWrite(hotCtx g, otlTbl t);
 
 LOffset otlGetCoverageSize(otlTbl t);
 LOffset otlGetClassSize(otlTbl t);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* OTL_H */

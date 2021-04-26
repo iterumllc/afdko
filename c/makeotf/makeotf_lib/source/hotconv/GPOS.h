@@ -8,6 +8,10 @@
 #include "common.h"
 #include "feat.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define GPOS_ TAG('G', 'P', 'O', 'S')
 
 /* Standard functions */
@@ -52,5 +56,9 @@ int GPOSSubtableBreak(hotCtx g);
 void GPOSAddPair(hotCtx g, void *si, GNode *first, GNode *second, char *filename, int lineNum);
 
 void GPOSPrintAFMKernData(hotCtx g);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* HOTCONV_GPOS_H */

@@ -7,6 +7,10 @@
 
 #include "common.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define vmtx_ TAG('v', 'm', 't', 'x')
 
 /* Standard functions */
@@ -18,5 +22,9 @@ void vmtxFree(hotCtx g);
 
 /* Supplementary Functions */
 int vmtxGetNLongVerMetrics(hotCtx g);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* HOTCONV_VMTX_H */

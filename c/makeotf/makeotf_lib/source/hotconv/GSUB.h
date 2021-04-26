@@ -8,6 +8,10 @@
 #include "common.h"
 #include "feat.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define GSUB_ TAG('G', 'S', 'U', 'B')
 
 /* Standard functions */
@@ -71,5 +75,9 @@ void GSUBAddCVParam(hotCtx g, void *param);
    GSUBLookupEnd(g);
 
    GSUBFeatureEnd(g); */
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* HOTCONV_GSUB_H */

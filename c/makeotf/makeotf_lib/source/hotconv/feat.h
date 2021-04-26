@@ -7,6 +7,10 @@
 
 #include "common.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #if HOT_DEBUG
 #define DF_LEVEL ((g->font.debug & HOT_DB_FEAT_2) ? 2 : ((g->font.debug & HOT_DB_FEAT_1) ? 1 : 0))
 #define DF(L, p)             \
@@ -58,16 +62,6 @@
 
 typedef unsigned short Label;
 
-/* --- Linked list support --- */
-
-typedef struct AnchorRec_ {
-    unsigned int format;
-    short x;
-    short y;
-    unsigned short pointIndex;
-} AnchorRec;
-
-#define kMaxAnchors 16
 typedef struct GNode_ GNode;
 
 typedef struct {
@@ -143,27 +137,14 @@ void featGlyphClassSort(hotCtx g, GNode **list, int unique, int reportDups);
 GNode ***featMakeCrossProduct(hotCtx g, GNode *pat, unsigned *n);
 
 Label featGetNextAnonLabel(hotCtx g);
-Label featGetLookupLabel(hotCtx g, GNode *sub, unsigned lkpFlags);
 
-/* --- PCCTS scanner functions --- */
-int featOpenIncludeFile(hotCtx g, char *filename);
-int featCloseIncludeFile(hotCtx g, int closeBase);
-char *featTrimParensSpaces(char *text);
-void featWrapUpFeatFile(void);
-void featSetIncludeReturnMode(int mode);
-int featGetIncludeReturnMode(void);
-void featSetTagReturnMode(int mode);
-int featGetTagReturnMode(void);
-int featAddAnonDataChar(char ch, int isEOL);
-void featAddNameStringChar(char ch);
-void featUnexpectedEOF(void);
 int featValidateGPOSChain(hotCtx g, GNode *targ, int lookupType);
 
-#define kDEFAULT_BASECLASS_NAME "FDK_BASE_CLASS"
-#define kDEFAULT_LIGATURECLASS_NAME "FDK_LIGATURE_CLASS"
-#define kDEFAULT_MARKCLASS_NAME "FDK_DEFAULT_MARK_CLASS"
-#define kDEFAULT_COMPONENTCLASS_NAME "FDK_DEFAULT_COMPONENT_CLASS"
 
 #endif /* HOT_FEAT_SUPPORT */
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* HOTCONV_FEAT_H */

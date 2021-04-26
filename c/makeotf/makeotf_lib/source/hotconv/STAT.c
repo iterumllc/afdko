@@ -301,7 +301,7 @@ void STATAddDesignAxis(hotCtx g, Tag tag, uint16_t nameID, uint16_t ordering) {
 
     // Currently registered tags are 'wght', 'wdth', 'opsz', 'ital', 'slnt'
     char tagString[4] = {TAG_ARG(tag)};
-    const uint32_t *regTags[5] = {
+    const uint32_t regTags[5] = {
                                   TAG('i', 't', 'a', 'l'),
                                   TAG('o', 'p', 's', 'z'),
                                   TAG('s', 'l', 'n', 't'),

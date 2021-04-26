@@ -6,7 +6,7 @@
 #########################################################################
 
 # Make definitions for Linux platform (x86-64)
-
+#
 # Configuration
 PLATFORM = linux
 HARDWARE = x86-64
@@ -27,14 +27,23 @@ ifneq ($(strip $(OSX)),) # In order to test under Mac OSX, define OSX in the use
 	STD_OPTS += -DOSX=1
 endif
 
-
+.PHONY: default
 default: $(TARGETS)
 
-$(PRG_TARGET): $(PRG_OBJS) $(PRG_LIBS) $(PRG_SRCS)  $(PRG_INCLUDES) 
+$(PRG_TARGET): $(PRG_OBJS) $(PRG_LIBS) $(PRG_SRCS)  $(PRG_INCLUDES)
 	mkdir -p $(EXE_DIR)
 	$(CC) $(CFLAGS) -o $@ $(PRG_OBJS) $(PRG_LIBS) $(SYS_LIBS)
 
+$(PRG_CXX_TARGET): $(PRG_OBJS) $(PRG_LIBS) $(PRG_SRCS)  $(PRG_INCLUDES)
+	mkdir -p $(EXE_DIR)
+	$(CXX) $(CXXFLAGS) -o $@ $(PRG_OBJS) $(PRG_LIBS) $(SYS_LIBS)
+
 clean:
+	if [ "$(CLEAN_DIRS)" ]; then \
+		for cdir in $(CLEAN_DIRS) ; do \
+			$(MAKE) -C $$cdir clean ; \
+		done \
+	fi
 	if [ "$(LIB_OBJS)" ]; then \
 			rm -f $(LIB_OBJS); \
 	fi
@@ -50,5 +59,3 @@ clean:
 	if [ "$(PRG_TARGET)" ]; then \
 			rm -f $(PRG_TARGET); \
 	fi
-	
-

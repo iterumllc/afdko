@@ -7,6 +7,10 @@
 
 #include "common.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define STAT_ TAG('S', 'T', 'A', 'T')
 
 /* Standard functions */
@@ -23,5 +27,9 @@ void STATAddAxisValueTable(hotCtx g, uint16_t format, Tag *axisTags,
                            Fixed *values, long count, uint16_t flags,
                            uint16_t nameID, Fixed minValue, Fixed maxValue);
 bool STATSetElidedFallbackNameID(hotCtx g, uint16_t nameID);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* HOTCONV_STAT_H */

@@ -26,6 +26,10 @@
 
 #include <string.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /* --------------------------------- Macros -------------------------------- */
 
 /* Define to supply Microsoft-specific function calling info, e.g. __cdecl */
@@ -416,5 +420,9 @@ char *bcopy(const void *src, void *dst, int len);
 #endif
 
 #define OVERRIDE(field) ((field) != SHRT_MAX)
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* HOTCONV_COMMON_H */

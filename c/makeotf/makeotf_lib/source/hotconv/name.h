@@ -7,6 +7,10 @@
 
 #include "common.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define name_ TAG('n', 'a', 'm', 'e')
 
 #define MISSING_MAC_DEFAULT_NAME 0x0002
@@ -31,5 +35,9 @@ unsigned short nameReserveUserID(hotCtx g);
 
 int nameVerifyDefaultNames(hotCtx g, unsigned short nameId);
 bool nameVerifyIDExists(hotCtx g, unsigned short nameId);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* HOTCONV_NAME_H */

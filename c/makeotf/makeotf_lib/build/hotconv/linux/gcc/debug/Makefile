@@ -23,12 +23,14 @@ INC_FLAGS = -I$(ROOT_DIR)/api \
             -I$(realpath $(ROOT_DIR)/../../public/lib/resource) \
             -I/usr/include/antlr4-runtime
 
-CFLAGS = $(STD_OPTS) $(INC_FLAGS) -DHOT_FEAT_SUPPORT=1 -g
-CXXFLAGS = $(STD_OPTS) $(INC_FLAGS) -DHOT_FEAT_SUPPORT=1 -g -std=c++11
+# The attributes warning is turned off because antlr 4 generates headers that
+# trigger it. See https://github.com/antlr/antlr4/issues/2450
+CXXFLAGS = $(STD_OPTS) $(INC_FLAGS) -DHOT_FEAT_SUPPORT=1 -g -Wall -Wno-attributes -std=c++11
+CFLAGS = $(STD_OPTS) $(INC_FLAGS) -DHOT_FEAT_SUPPORT=1 -g -Wall
 
 # PARSE_OBJS = featerr.o featgram.o featscan.o
 
-PARSE_OBJS = FeaLexer.o FeaParser.o FeaParserVisitor.o FeaParserBaseVisitor.o HotFeatureVisitor.o
+PARSE_OBJS = FeatLexer.o FeatParser.o FeatParserVisitor.o FeatParserBaseVisitor.o FeatVisitor.o FeatCtx.o
 
 OBJS = anon.o BASE.o CFF_.o cmap.o $(PARSE_OBJS) \
        GDEF.o GPOS.o GSUB.o head.o hhea.o hmtx.o hot.o map.o maxp.o \

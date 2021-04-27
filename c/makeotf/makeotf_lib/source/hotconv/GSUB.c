@@ -1289,7 +1289,7 @@ static void fillMultiple1(hotCtx g, GSUBCtx h, long beg, long end, long size,
                           unsigned int nSubs) {
     otlTbl otl;
     Subtable *sub;
-    int isRTL;
+    //int isRTL;
     unsigned nSequences;
     GID *pSubs;
     long i;
@@ -1307,7 +1307,7 @@ static void fillMultiple1(hotCtx g, GSUBCtx h, long beg, long end, long size,
     startNewSubtable(g);
     sub = h->new.sub;
     otl = sub->extension.use ? sub->extension.otl : h->otl;
-    isRTL = sub->lkpFlag & otlRightToLeft;
+    //isRTL = sub->lkpFlag & otlRightToLeft;
 
     fmt->SubstFormat = 1;
     fmt->SequenceCount = nSequences = end - beg + 1;
@@ -2753,6 +2753,7 @@ void sortInputList(GSUBCtx h, GNode **list) {
 /* Fill chaining contextual subtable format 3 */
 
 /* Compare glyph ids */
+#if 0
 static int CDECL cmpGlyphIds(const void *first, const void *second) {
     GID a = *(GID *)first;
     GID b = *(GID *)second;
@@ -2763,6 +2764,7 @@ static int CDECL cmpGlyphIds(const void *first, const void *second) {
     }
     return 0;
 }
+#endif
 
 static void fillReverseChain1(hotCtx g, GSUBCtx h, otlTbl otl, Subtable *sub,
                               long inx) {

@@ -2574,7 +2574,6 @@ static Offset classDefMake(hotCtx g, GPOSCtx h, otlTbl t, int cdefInx,
 
 static void fillPairPos2(hotCtx g, GPOSCtx h) {
     int i;
-    int secondClVal;
     LOffset size;
     Subtable *sub = h->new.sub; /* startNewSubtable() called already. */
     otlTbl otl = sub->extension.use ? sub->extension.otl : h->otl;
@@ -2613,7 +2612,6 @@ static void fillPairPos2(hotCtx g, GPOSCtx h) {
     }
 
     /* --- Fill in Class1Record */
-    secondClVal = 0;
     for (i = 0; i < h->new.pairs.cnt; i++) {
         KernRec *pair = &h->new.pairs.array[i];
         unsigned cl1 = pair->first.gcl->gid;
@@ -2774,13 +2772,14 @@ typedef struct {
 #define CHAIN3_SIZE(nBack, nInput, nLook, nPos) (uint16 * 5 +                                              \
                                                  uint16 * (nBack) + uint16 * (nInput) + uint16 * (nLook) + \
                                                  POS_LOOKUP_RECORD_SIZE * (nPos))
-
+#if 0
 static void recycleProd(GPOSCtx h) {
     long i;
     for (i = 0; i < h->prod.cnt; i++) {
         featRecycleNodes(h->g, h->prod.array[i]);
     }
 }
+#endif
 
 /* Tries to add rule to current anon subtbl. If successful, returns 1, else 0.
    If rule already exists in subtbl, recycles targ */
@@ -3455,7 +3454,6 @@ static void initAnchorArray(void *ctx, long count, AnchorMarkInfo *anchor) {
 }
 
 static void initAnchorListRec(void *ctx, long count, AnchorListRec *anchorListRec) {
-    long i;
     AnchorMarkInfo *anchor = &anchorListRec->anchor;
     initAnchorArray(ctx, count, anchor);
     return;
@@ -3849,7 +3847,6 @@ static void fillMarkToBase(hotCtx g, GPOSCtx h) {
     Subtable *sub;
     otlTbl otl;
     LOffset size = MARK_TO_BASE_1_SIZE;
-    LOffset markAnchorSize;
     unsigned short numMarkGlyphs = 0;
     MarkBasePosFormat1 *fmt = MEM_NEW(g, sizeof(MarkBasePosFormat1));
     startNewSubtable(g);
@@ -3869,7 +3866,6 @@ static void fillMarkToBase(hotCtx g, GPOSCtx h) {
     {
         int i;
         otlCoverageBegin(g, otl);
-        markAnchorSize = 0;
         for (i = 0; i < h->new.markClassList.cnt; i++) {
             GNode *nextNode = (h->new.markClassList.array)[i].gnode;
             while (nextNode != NULL) {
@@ -3914,8 +3910,6 @@ static void fillMarkToBase(hotCtx g, GPOSCtx h) {
         BaseRecord *nextRec;
         long baseArraySize;
         GID prevGID;
-        AnchorMarkInfo kDefaultAnchor = {
-            0, 0, 0, 1, NULL, 0};
 
         fmt->BaseArray = (Offset)size; /* offset from the start of the MarkToBase subtable = size of subtable + size of MarkArray table. */
         fmt->BaseArray_.BaseRecord = nextRec = MEM_NEW(g, sizeof(BaseRecord) * h->new.baseList.cnt);
@@ -4108,7 +4102,6 @@ static void fillMarkToLigature(hotCtx g, GPOSCtx h) {
     Subtable *sub;
     otlTbl otl;
     LOffset size = MARK_TO_BASE_1_SIZE;
-    LOffset markhAnchorSize;
     long numMarkGlyphs = 0;
     MarkLigaturePosFormat1 *fmt = MEM_NEW(g, sizeof(MarkLigaturePosFormat1));
     startNewSubtable(g);
@@ -4127,7 +4120,6 @@ static void fillMarkToLigature(hotCtx g, GPOSCtx h) {
     /* info to the mark record list.                                        */
     {
         otlCoverageBegin(g, otl);
-        markhAnchorSize = 0;
         for (i = 0; i < h->new.markClassList.cnt; i++) {
             GNode *nextNode = (h->new.markClassList.array)[i].gnode;
             while (nextNode != NULL) {

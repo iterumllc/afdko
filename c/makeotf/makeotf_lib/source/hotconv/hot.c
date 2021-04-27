@@ -1110,7 +1110,7 @@ static int prepWinName(hotCtx g, signed char *src) {
         {   E_,     A_|H_,  A_|H_,  A_|H_,  E_,     E_ },   /* [4] */
     };
 
-    char *dst = dnaGROW(g->tmp, (long)strlen(src));
+    char *dst = dnaGROW(g->tmp, (long)strlen((char *)src));
     int state = 0;
     unsigned value = 0;
 
@@ -1239,7 +1239,7 @@ static int prepMacName(hotCtx g, signed char *src) {
         {   E_,     A_|H_,  A_|H_,  A_|H_,  E_,     E_ },   /* [2] */
     };
 
-    char *dst = dnaGROW(g->tmp, (long)strlen(src));
+    char *dst = dnaGROW(g->tmp, (long)strlen((char *)src));
     int state = 0;
     unsigned value = 0;
 
@@ -1553,6 +1553,7 @@ char *hotGetString(hotCtx g, SID sid, unsigned *length) {
 }
 
 /* Encode integer and return length */
+#if 0
 static int encInteger(short i, unsigned char *cstr) {
     if (-107 <= i && i <= 107) {
         /* Single byte number */
@@ -1578,6 +1579,7 @@ static int encInteger(short i, unsigned char *cstr) {
         return 3;
     }
 }
+#endif
 
 /* --------------------- Temporary Debugging Functions --------------------- */
 

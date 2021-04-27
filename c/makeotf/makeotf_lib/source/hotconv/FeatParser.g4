@@ -1,6 +1,6 @@
-parser grammar FeaParser;
+parser grammar FeatParser;
 
-options { tokenVocab = FeaLexer; }
+options { tokenVocab = FeatLexer; }
 
 tag:
 	NAMELABEL | EXTNAME | CATCHTAG

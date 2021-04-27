@@ -288,7 +288,7 @@ static void CDECL cmapMsg(hotCtx g, int msgType, char *fmt, ...) {
     cmapCtx h = g->ctx.cmap;
     va_list ap;
     char msgVar[1024];
-    char msg[1024];
+    char msg[1536];
 
     va_start(ap, fmt);
     VSPRINTF_S(msgVar, sizeof(msgVar), fmt, ap);
@@ -823,6 +823,7 @@ static void makeSegment4(hotCtx g, Format4 *fmt, int nSegments, int segment,
     }
 }
 
+#if 0
 /* Make format 4 cmap */
 static void doRemovePUAs(hotCtx g, cmapCtx h, int isMixedByte) {
     long i;
@@ -844,6 +845,7 @@ static void doRemovePUAs(hotCtx g, cmapCtx h, int isMixedByte) {
         h->mapping.cnt -= nPUAs;
     }
 }
+#endif
 
 static Format4 *makeFormat4(cmapCtx h, unsigned long *length) {
     hotCtx g = h->g;
@@ -1166,7 +1168,6 @@ int cmapEndEncoding(hotCtx g) {
         /* o InDesign 1.0 CoolType restrictions: supports only format 0 or 6   */
         /*   Mac cmap.                                                         */
 
-        int format4Selected = 0;
         unsigned long format4Size = ULONG_MAX; /* Denotes fmt 4 not allowed */
         Format4 *format4 =
             (h->platformId == cmap_MAC || h->platformId == cmap_CUSTOM)
@@ -1184,7 +1185,6 @@ int cmapEndEncoding(hotCtx g) {
 #if HOT_DEBUG
             cmapMsg(g, hotNOTE, "format 4 cmap created");
 #endif
-            format4Selected = 1;
             encoding->format = format4;
         } else {
             encoding->format = makeFormat6(h, &format6Size);

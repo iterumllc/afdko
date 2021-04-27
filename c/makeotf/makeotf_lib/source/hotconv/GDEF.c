@@ -87,7 +87,6 @@ static LOffset createMarkAttachClassDef(GDEFCtx h);
 static LOffset createMarkSetClassDef(GDEFCtx h, hotCtx g);
 static void writeAttachTable(hotCtx g, GDEFCtx h);
 static void writeLigCaretTable(hotCtx g, GDEFCtx h);
-static void writeMarkSetClassDef(hotCtx g, GDEFCtx h);
 static void writeMarkSetClassTable(hotCtx g, GDEFCtx h);
 
 /* --------------------------- Context Definition -------------------------- */
@@ -711,7 +710,6 @@ static void validateGlyphClasses(GDEFCtx h, GNode **classList, long numClasses) 
                 className2 = "mark attachment class 2";
             }
             for (p1 = headNode1; p1 != NULL;) {
-                GNode *prev = NULL;
                 for (p2 = headNode2; p2 != NULL;) {
                     if (p1->gid == p2->gid) {
                         hadConflictingClassDef = 1;
@@ -720,7 +718,6 @@ static void validateGlyphClasses(GDEFCtx h, GNode **classList, long numClasses) 
                             hotMsg(g, hotWARNING, "GDEF MarkAttachment. Glyph '%s' gid '%d'. previous glyph class '%s' conflicts with new class '%s'.", g->note.array, p1->gid, className1, className2);
                         }
                     }
-                    prev = p2;
                     p2 = p2->nextCl;
                 }
                 p1 = p1->nextCl;

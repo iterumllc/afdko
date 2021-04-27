@@ -118,6 +118,7 @@ static char *getName(nameCtx h,
 
 /* Get a name and checks characters for for 7-bit cleanliness. Return NULL
    if no name or not 7-bit clean, else name string. */
+#if 0
 static char *get7BitCleanName(nameCtx h,
                               unsigned short platformId,
                               unsigned short platspecId,
@@ -134,6 +135,7 @@ static char *get7BitCleanName(nameCtx h,
     }
     return str;
 }
+#endif
 
 /* Get Windows default 7-bit clean name. */
 static char *getWinDfltName(nameCtx h, unsigned short nameId) {
@@ -149,6 +151,7 @@ static char *getWinDfltName(nameCtx h, unsigned short nameId) {
 }
 
 /* Get Macintosh default 7-bit clean name. */
+#if 0
 static char *getMacDfltName(nameCtx h, unsigned short nameId) {
     return getName(h,
                    HOT_NAME_MAC_PLATFORM,
@@ -156,6 +159,7 @@ static char *getMacDfltName(nameCtx h, unsigned short nameId) {
                    HOT_NAME_MAC_ENGLISH,
                    nameId);
 }
+#endif
 
 /* ----------------------------- Name Addition ----------------------------- */
 

@@ -40,7 +40,7 @@ TARGETS = $(PRG_CXX_TARGET)
 # Standard definitions
 include ../../../../../public/config/linux/gcc/gcc.mak
 
-$(EXE_DIR)/makeotfexe : CXXFLAGS = $(STD_OPTS) -lantlr4-runtime -g
+$(TARGETS) : CXXFLAGS = $(STD_OPTS) -lantlr4-runtime -g
 
 # program rule is in gcc.mak
 

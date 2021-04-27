@@ -1,4 +1,4 @@
-lexer grammar FeaLexer;
+lexer grammar FeatLexer;
 
 COMMENT		: '#' ~[\r\n]* -> skip ;
 WHITESPACE	: [ \t\r\n]+ -> skip ;

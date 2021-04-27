@@ -387,6 +387,7 @@ GID mapCID2GID(hotCtx g, CID cid) {
 
 /* Sort GNAME_UNREC glyphs before others, and among the GNAME_UNREC glyphs,
    sort GNAME_UNREC_HAS_SUPP after the others. */
+#if 0
 static int CDECL cmpUnrecGlyphName(const void *first, const void *second) {
     hotGlyphInfo *a = *(hotGlyphInfo **)first;
     hotGlyphInfo *b = *(hotGlyphInfo **)second;
@@ -410,6 +411,7 @@ static int CDECL cmpUnrecGlyphName(const void *first, const void *second) {
         return 0;
     }
 }
+#endif
 
 static int CDECL cmpGlyphName(const void *a, const void *b) {
     return strcmp((*(hotGlyphInfo **)a)->gname.str,
@@ -463,18 +465,15 @@ hotGlyphInfo *mapName2Glyph(hotCtx g, char *gname, char **useAliasDB) {
 }
 
 void mapGID2Name(hotCtx g, GID gid, char *msg) {
-    int len;
     hotGlyphInfo *hGID = &g->font.glyphs.array[gid];
 
     if (hGID->srcName == NULL) {
         sprintf(msg, "%s", hGID->gname.str);
-        len = strlen(msg);
     } else {
         if (g->convertFlags & HOT_CONVERT_FINAL_NAMES)
             sprintf(msg, "%s", hGID->gname.str);
         else
             sprintf(msg, "%s", hGID->srcName);
-        len = strlen(msg);
     }
 }
 
@@ -1864,6 +1863,7 @@ static void setOS_2Fields(hotCtx g) {
 }
 
 /* Create a custom cmap which stores the custom PS encoding. */
+#if 0
 static void makeCustomcmap(hotCtx g) {
     long i;
     uint8_t charset = g->font.win.CharSet;
@@ -1892,6 +1892,7 @@ static void makeCustomcmap(hotCtx g) {
     }
     cmapEndEncoding(g); /* Custom */
 }
+#endif
 
 /* Check if Mac heuristic glyphs are present in the given encoding (don't check
    unencoded glyphs). Return codePage index if detected, -1 otherwise. (This

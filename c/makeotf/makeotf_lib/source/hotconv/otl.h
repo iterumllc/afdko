@@ -88,7 +88,7 @@ void otlCoverageWrite(hotCtx g, otlTbl t);
 /* --- Class table --- */
 
 void otlClassBegin(hotCtx g, otlTbl t);
-void otlClassAddMapping(hotCtx g, otlTbl t, GID glyph, unsigned class);
+void otlClassAddMapping(hotCtx g, otlTbl t, GID glyph, unsigned cls);
 Offset otlClassEnd(hotCtx g, otlTbl t);
 void otlClassWrite(hotCtx g, otlTbl t);
 

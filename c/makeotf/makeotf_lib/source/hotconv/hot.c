@@ -53,33 +53,30 @@ static void initOverrides(hotCtx g) {
 static ctlMemoryCallbacks hot_dna_memcb;
 
 static void *hot_manage(ctlMemoryCallbacks *cb, void *old, size_t size) {
-    hotCallbacks hcb = ((hotCtx)cb->ctx)->cb;
+    hotCtx h = (hotCtx)cb->ctx;
     void *p = NULL;
     if (size > 0) {
         if (old == NULL) {
-            p = hcb.malloc(hcb.ctx, size);
+            p = hotMemNew(h, size);
             return (p);
         } else {
-            p = hcb.realloc(hcb.ctx, old, size);
+            p = hotMemResize(h, old, size);
             return (p);
         }
     } else {
         if (old == NULL) {
             return NULL;
         } else {
-            hcb.free(hcb.ctx, old);
+            hotMemFree(h, old);
             return NULL;
         }
     }
 }
 
 hotCtx hotNew(hotCallbacks *hotcb) {
-    hotCtx g = hotcb->malloc(hotcb->ctx, sizeof(struct hotCtx_));
     tcCallbacks tccb;
     time_t now;
-
-    g->hadError = 0;
-    g->convertFlags = 0;
+    hotCtx g = malloc(sizeof(struct hotCtx_));
 
     if (g == NULL) {
         if (hotcb->message != NULL) {
@@ -87,6 +84,9 @@ hotCtx hotNew(hotCallbacks *hotcb) {
         }
         hotcb->fatal(hotcb->ctx);
     }
+
+    g->hadError = 0;
+    g->convertFlags = 0;
 
     /* Set version numbers. The hot library version serves to identify the      */
     /* software version that built an OTF font and is saved in the Version name */
@@ -157,9 +157,6 @@ hotCtx hotNew(hotCallbacks *hotcb) {
     tccb.ctx = hotcb->ctx;
     tccb.fatal = hotcb->fatal;
     tccb.message = hotcb->message; /* Suppress messages from library */
-    tccb.malloc = hotcb->malloc;
-    tccb.realloc = hotcb->realloc;
-    tccb.free = hotcb->free;
     tccb.psId = hotcb->psId;
     tccb.psRefill = hotcb->psRefill;
     tccb.psSize = NULL;
@@ -188,7 +185,7 @@ hotCtx hotNew(hotCallbacks *hotcb) {
 void setVendId_str(hotCtx g, char *vend) {
     char *id;
 
-    id = (char *)g->cb.malloc(g->cb.ctx, strlen(vend) + 1);
+    id = (char *)hotMemNew(g, strlen(vend) + 1);
     strcpy(id, vend);
     g->font.vendId = id;
 }
@@ -283,13 +280,13 @@ static void cbMessage(void *ctx, int type, char *text) {
 /* [cffread callback] Allocate memory */
 static void *cbMalloc(void *ctx, size_t size) {
     hotCtx g = ctx;
-    return g->cb.malloc(g->cb.ctx, size);
+    return hotMemNew(g, size);
 }
 
 /* [cffread callback] Free memory */
 static void cbFree(void *ctx, void *ptr) {
     hotCtx g = ctx;
-    g->cb.free(g->cb.ctx, ptr);
+    hotMemFree(g, ptr);
 }
 
 /* [cffread callback] Seek to offset and return data. */
@@ -1414,6 +1411,24 @@ void hotAddAnonTable(hotCtx g, unsigned long tag, hotAnonRefill refill) {
 
 /* ---------------------------- Utility Functions --------------------------- */
 
+void *hotMemNew(hotCtx g, size_t size) {
+    void *ptr = malloc(size);
+    if ( ptr == NULL )
+        hotMsg(g, hotFATAL, "out of memory");
+    return ptr;
+}
+
+void *hotMemResize(hotCtx g, void *old, size_t size) {
+    void *ptr = realloc(old, size);
+    if ( ptr == NULL )
+        hotMsg(g, hotFATAL, "out of memory");
+    return ptr;
+}
+
+void hotMemFree(hotCtx g, void *ptr) {
+    free(ptr);
+}
+
 /* Call fatal if hadError is set (this is set by a hotMsg() hotERROR call) */
 void hotQuitOnError(hotCtx g) {
     if (g->hadError) {
@@ -1426,7 +1441,7 @@ void hotQuitOnError(hotCtx g) {
    message would be. */
 /* Print note, error, warning, or fatal message (from note buffer is fmt is
    NULL). If note used, handle reuse of g->note. Prepend FontName. */
-void CDECL hotMsg(hotCtx g, int level, char *fmt, ...) {
+void CDECL hotMsg(hotCtx g, int level, const char *fmt, ...) {
     void (*fatal)(void *) = NULL; /* Suppress optimizer warning */
     void *ctx = NULL;             /* Suppress optimizer warning */
 

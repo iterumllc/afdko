@@ -309,8 +309,6 @@ void mapNew(hotCtx g) {
     dnaINIT(g->DnaCTX, h->ps.buf, 35000, 50000); /* ? xxx */
     h->ps.cb.ctx = g->cb.ctx;
     h->ps.cb.fatal = g->cb.fatal;
-    h->ps.cb.malloc = g->cb.malloc;
-    h->ps.cb.free = g->cb.free;
     h->ps.cb.buf = &h->ps.buf;
     h->ps.cb.message = g->cb.message;
 

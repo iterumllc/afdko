@@ -26,7 +26,7 @@ extern "C" {
 /* Preferred to 0 for proper otl sorting. This can't conflict with a valid
    tag since tag characters must be in ASCII 32-126. */
 #define TAG_UNDEF 0xFFFFFFFF
-#define TAG_STAND_ALONE 0x01010101 /* Feature, script. language tags used for stand-alone lookups */
+#define TAG_STAND_ALONE ((Tag) { 0x01010101 }) /* Feature, script. language tags used for stand-alone lookups */
 
 #define MAX_FEAT_PARAM_NUM 256
 
@@ -61,6 +61,16 @@ extern "C" {
                         ((L) & ~REF_LAB) <= FEAT_ANON_LKP_END)
 
 typedef unsigned short Label;
+
+typedef struct { /* Subtable record */
+    unsigned short Format;
+    unsigned short FeatUILabelNameID;
+    unsigned short FeatUITooltipTextNameID;
+    unsigned short SampleTextNameID;
+    unsigned short NumNamedParameters;
+    unsigned short FirstParamUILabelNameID;
+    dnaDCL(unsigned long, charValues);
+} CVParameterFormat; /* Special case format for subtable data. */
 
 typedef struct GNode_ GNode;
 
@@ -112,7 +122,7 @@ struct GNode_ {
 /* --- Standard functions --- */
 
 void featNew(hotCtx g);
-int featFill(hotCtx g);
+void featFill(hotCtx g);
 void featReuse(hotCtx g);
 void featFree(hotCtx g);
 

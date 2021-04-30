@@ -24,7 +24,7 @@ INC_FLAGS = -I$(ROOT_DIR)/api \
             -I/usr/include/antlr4-runtime
 
 CXXFLAGS = $(STD_OPTS) $(INC_FLAGS) -DHOT_FEAT_SUPPORT=1 -Wall -Wno-attributes -std=c++11
-CFLAGS = $(STD_OPTS) $(INC_FLAGS) -DHOT_FEAT_SUPPORT=1 -Wall
+CFLAGS = $(STD_OPTS) $(INC_FLAGS) -DHOT_FEAT_SUPPORT=1 -Wall -std=c99
 
 # PARSE_OBJS = featerr.o featgram.o featscan.o
 

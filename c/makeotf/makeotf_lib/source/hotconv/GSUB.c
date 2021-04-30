@@ -79,15 +79,6 @@ typedef struct { /* Subtable record */
     unsigned short nameID;
 } FeatureNameParameterFormat; /* Special case format for subtable data. */
 
-typedef struct { /* Subtable record */
-    unsigned short Format;
-    unsigned short FeatUILabelNameID;
-    unsigned short FeatUITooltipTextNameID;
-    unsigned short SampleTextNameID;
-    unsigned short NumNamedParameters;
-    unsigned short FirstParamUILabelNameID;
-    dnaDCL(unsigned long, charValues);
-} CVParameterFormat; /* Special case format for subtable data. */
 #define CV_PARAM_SIZE(p) ((uint16 * 7) + 3 * (p->charValues.cnt))
 
 typedef struct {

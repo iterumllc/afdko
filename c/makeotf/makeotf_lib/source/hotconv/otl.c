@@ -1594,7 +1594,7 @@ static Offset fillFeatureList(hotCtx g, otlTbl t) {
         Subtable *sub = &t->subtable.array[iFeature];
         FeatureRecord *rec = &t->tbl.FeatureList_.FeatureRecord[i];
         Feature *feature = &rec->Feature_;
-        /* if ( sub->feature == (Tag)TAG_STAND_ALONE) */
+        /* if ( sub->feature == TAG_STAND_ALONE) */
         /*     continue;                              */
 
         /* Fill FeatureRecord */
@@ -2027,7 +2027,7 @@ void otlSubtableAdd(hotCtx g, otlTbl t, Tag script, Tag language, Tag feature,
     sub->fmt = fmt;
     sub->isFeatParam = isFeatParam;
 
-    if (feature == (Tag)TAG_STAND_ALONE) {
+    if (feature == TAG_STAND_ALONE) {
         sub->seenInFeature = 0;
     } else {
         sub->seenInFeature = 1;
@@ -2036,7 +2036,7 @@ void otlSubtableAdd(hotCtx g, otlTbl t, Tag script, Tag language, Tag feature,
     if (script == TAG_UNDEF) {
          t->nAnonSubtables++;
      }
-     if (feature == (Tag)TAG_STAND_ALONE) {
+     if (feature == TAG_STAND_ALONE) {
          t->nStandAloneSubtables++;
      }
 

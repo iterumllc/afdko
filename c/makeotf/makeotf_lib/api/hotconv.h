@@ -29,6 +29,20 @@ inside the (1,0,0) nameID 5 "Version: string. */
 /* Hatch OpenType (HOT) Font Conversion Library
    ============================================
 
+   2021 Note
+   ---------
+
+   The original design of this library anticipated its use in a broad variety
+   of contexts and with differently organized source materials. It has turned
+   out that it is mainly or exclusively used by the AFDKO makeotfexe program.
+
+   As one consequence the 2021 reorganization of the code has eliminated
+   some of the now-unneeded encapsulation of the library. The memory allocation
+   callbacks have been removed and the feature files are opened from within
+   the library. Contributors should feel free to make further changes along
+   the same lines if and when they reduce the complexity of fixing bugs or
+   adding new features.
+
    Overview
    --------
    This library converts platform independent font data (PostScript outline
@@ -191,19 +205,6 @@ struct hotCallbacks_ {
    hotWARNING, hotERROR, and hotFATAL. A client is free to handle messages in
    any manner they choose.
 
-   Memory management: */
-
-    void *(*malloc)(void *ctx, size_t size);
-    void *(*realloc)(void *ctx, void *old, size_t size);
-    void (*free)(void *ctx, void *ptr);
-
-    /* [Required] These three memory management functions manage memory in the same
-   manner as the Standard C Library functions of the same name. (This means
-   that they must observe the alignment requirements imposed by the standard.)
-   The client is required to handle any error conditions that may arise.
-   Specifically, a client must ensure requested memory is available and must
-   never return a NULL pointer from malloc() or realloc().
-
    PostScript data input: */
 
     char *(*psId)(void *ctx);
@@ -282,29 +283,15 @@ struct hotCallbacks_ {
 
    Feature file data input: */
 
-    char *(*featOpen)(void *ctx, char *name, long offset);
-    char *(*featRefill)(void *ctx, long *count);
-    void (*featClose)(void *ctx);
+    char *(*featTopLevelFile)(void *ctx);
     void (*featAddAnonData)(void *ctx, char *data, long count,
                             unsigned long tag);
 
-    /* [Optional] These functions are called to handle feature file support.
-   featOpen() is called to open either the main feature file for the font
-   (indicated by name being NULL) or a feature include file (name will be the
-   file name indicated in the "include" directive in a feature file).
-   featOpen() should locate the file if name is not absolute (typically by
-   searching first in the directory in which the main feature file resides, and
-   then in a standard directory). If the file is not found or not needed (in
-   the case of name being NULL), featOpen() should return NULL. If the file is
-   found, featOpen() should open it, seek to offset, and return a descriptive
-   identifier (typically the full file name), which hotconv will use to report
-   any feature error messages within the file.
-
-   featRefill() is identical to cffRefill() except that it operates on the
-   feature file opened by featOpen().
-
-   featClose() closes the feature file opened by featOpen().
-
+    /* [Required] These functions are called to handle feature file support.
+   featTopLevelFile() should return a relative or absolute path (which need
+   only be valid for the length of the call) to the top-level feature file
+   or NULL if there is no file.
+   
    featAddAnonData() is called at the end of every anonymous block in the
    feature file. It supplies a pointer to the data seen within the block (from
    the beginning of the line after the opening brace and up to the end of the
@@ -316,6 +303,9 @@ struct hotCallbacks_ {
    library does not directly support. In these cases, the client must add the
    anonymous tables by calls to hotAddAnonTable() within the duration of the
    featAddAnonData() callbacks.
+
+   Anon blocks are now deprecated in the spec and makeotfexe does nothing with
+   them.
 
    Temporary file I/O (all optional) */
 

@@ -2,14 +2,18 @@
    This software is licensed as OpenSource, under the Apache License, Version 2.0. This license is available at: http://opensource.org/licenses/Apache-2.0. */
 /***********************************************************************/
 
-#ifndef HOTCONV_FEAT_H
-#define HOTCONV_FEAT_H
+#ifndef HOTCONV_FEATPRIV_C_H
+#define HOTCONV_FEATPRIV_C_H
 
 #include "common.h"
+#include "feat.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+typedef struct featCtx_ *featCtx;
+
 
 #if HOT_FEAT_SUPPORT
 
@@ -37,4 +41,4 @@ void featUnexpectedEOF(void);
 }
 #endif
 
-#endif /* HOTCONV_FEAT_H */
+#endif /* HOTCONV_FEATPRIV_C_H */

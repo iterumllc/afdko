@@ -31,7 +31,7 @@
 
 #define MAX_TOKEN 64
 
-extern featCtx h; /* Not reentrant; see featNew() comments */
+extern struct featCtx_ *h; /* Not reentrant; see featNew() comments */
 extern hotCtx g;
 
 typedef union {

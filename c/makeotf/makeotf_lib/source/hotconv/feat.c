@@ -1,4 +1,4 @@
-/* Copyright 2014 Adobe Systems Incorporated (http://www.adobe.com/). All Rights Reserved.
+/* Copyright 2014 Adobe Systems Incorporated (http://www.adobe.com/). All Rights Reserved.A
    This software is licensed as OpenSource, under the Apache License, Version 2.0. This license is available at: http://opensource.org/licenses/Apache-2.0. */
 
 /*
@@ -231,15 +231,7 @@ struct featCtx_ {
         dnaDCL(RuleInfo, rules);   /* Rules accumulator */
     } aalt;
 
-    struct {
-        unsigned short Format;
-        unsigned short FeatUILabelNameID;
-        unsigned short FeatUITooltipTextNameID;
-        unsigned short SampleTextNameID;
-        unsigned short NumNamedParameters;
-        unsigned short FirstParamUILabelNameID;
-        dnaDCL(unsigned long, charValues);
-    } cvParameters;
+    CVParameterFormat cvParameters;
 
     /* --- Hash stuff --- */
     HashElement *ht[HASH_SIZE]; /* Hash table */
@@ -2413,7 +2405,7 @@ static int checkTag(Tag tag, int type, int atStart) {
         if (type == featureTag) {
             /* Allow interleaving features */
             if (tagAssign(tag, featureTag, 1) == 0) {
-                if (tag != (Tag)TAG_STAND_ALONE) {
+                if (tag != TAG_STAND_ALONE) {
                     /* This is normal for standalone lookup blocks- we use the same feature tag for each. */
                     featMsg(hotWARNING, "feature already defined: %s", zzlextext);
                 }
@@ -2447,7 +2439,7 @@ static int checkTag(Tag tag, int type, int atStart) {
                         "\"script\" and \"language\" statements "
                         "are not allowed in 'aalt' or 'size' features; " USE_LANGSYS_MSG);
                 return -1;
-            } else if ((tag != (Tag)TAG_STAND_ALONE) && (h->curr.feature == (Tag)TAG_STAND_ALONE)) {
+            } else if ((tag != TAG_STAND_ALONE) && (h->curr.feature == TAG_STAND_ALONE)) {
                 featMsg(hotERROR,
                         "\"script\" and \"language\" statements "
                         "are not allowed within standalone lookup blocks; ");
@@ -4166,10 +4158,10 @@ static void checkLkpName(char *name, int linenum, int atStart, int isStandAlone)
         /* This is a standalone lookup, used outside of a feature block. */
         /* Add it to the dummy feature 'A\0\0A'                           */
         if (atStart) {
-            checkTag((Tag)TAG_STAND_ALONE, featureTag, atStart);
-            checkTag((Tag)TAG_STAND_ALONE, scriptTag, atStart);
+            checkTag(TAG_STAND_ALONE, featureTag, atStart);
+            checkTag(TAG_STAND_ALONE, scriptTag, atStart);
         } else {
-            checkTag((Tag)TAG_STAND_ALONE, featureTag, atStart);
+            checkTag(TAG_STAND_ALONE, featureTag, atStart);
         }
     } else {
         if (h->curr.feature == aalt_) {
@@ -4345,7 +4337,7 @@ static void reportOldSyntax(void) {
     }
 }
 
-int featFill(hotCtx g) {
+void featFill(hotCtx g) {
 #if HOT_FEAT_SUPPORT
     featCtx h = g->ctx.feat;
     State initState = {
@@ -4392,8 +4384,6 @@ int featFill(hotCtx g) {
     hotQuitOnError(g);
 
 #endif /* HOT_FEAT_SUPPORT */
-
-    return 1;
 }
 
 void featReuse(hotCtx g) {

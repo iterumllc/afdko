@@ -32,9 +32,6 @@ void cbFree(cbCtx h);
 /* --- Utility functions --- */
 void CDECL cbFatal(cbCtx h, char *fmt, ...);
 void CDECL cbWarning(cbCtx h, char *fmt, ...);
-void *cbMemNew(cbCtx h, size_t size);
-void *cbMemResize(cbCtx h, void *old, size_t size);
-void cbMemFree(cbCtx h, void *ptr);
 void myfatal(void *ctx);
 void message(void *ctx, int type, char *text);
 #define OTHERFLAGS_ISWINDOWSBOLD (1 << 0)

@@ -92,7 +92,9 @@ static void makeArgs(char *filename) {
     fileSeek(&file, 0, SEEK_END);
 
     length = fileTell(&file);
-    script.buf = cbMemNew(cbctx, length + 1);
+    script.buf = malloc(length + 1);
+    if ( script.buf == NULL )
+        cbFatal(cbctx, "out of memory");
 
     fileSeek(&file, 0, SEEK_SET);
     fileReadN(&file, length, script.buf);
@@ -868,7 +870,7 @@ int c_main(int argc, char *argv[]) {
     parseArgs(argc, argv, 0);
 
     /* Clean up */
-    cbMemFree(cbctx, script.buf);
+    free(script.buf);
     dnaFREE(script.args);
     cbFree(cbctx);
 

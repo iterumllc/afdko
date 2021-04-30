@@ -26,7 +26,7 @@ INC_FLAGS = -I$(ROOT_DIR)/api \
 # The attributes warning is turned off because antlr 4 generates headers that
 # trigger it. See https://github.com/antlr/antlr4/issues/2450
 CXXFLAGS = $(STD_OPTS) $(INC_FLAGS) -DHOT_FEAT_SUPPORT=1 -g -Wall -Wno-attributes -std=c++11
-CFLAGS = $(STD_OPTS) $(INC_FLAGS) -DHOT_FEAT_SUPPORT=1 -g -Wall
+CFLAGS = $(STD_OPTS) $(INC_FLAGS) -DHOT_FEAT_SUPPORT=1 -g -Wall -std=c99
 
 # PARSE_OBJS = featerr.o featgram.o featscan.o
 

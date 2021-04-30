@@ -1,7 +1,26 @@
 
 #include "antlr4-runtime.h"
 #include "assert.h"
+#include "string.h"
 #include "FeatCtx.h"
+#include "FeatVisitor.h"
+#include "FeatParser.h"
+
+void FeatCtx::fill(void) {
+    char *featpathname = g->cb.featTopLevelFile(g->cb.ctx);
+    if ( featpathname == NULL )
+        return;
+
+    FeatVisitor *fv = new FeatVisitor(this, strdup(featpathname));
+    if ( fv->ParseAndRegister(true) )
+        fv->Translate();
+    hotMsg(g, hotFATAL, "Translation of %s finished \n", featpathname);
+    return;
+}
+
+FeatCtx::~FeatCtx() {
+    // XXX destruct visitors
+}
 
 inline FeatCtx *hctofc(hotCtx g) {
     assert( g->ctx.feat != NULL );
@@ -21,7 +40,7 @@ void featFree(hotCtx g) {
     g->ctx.feat = NULL;
 }
 
-int featFill(hotCtx g) { return hctofc(g)->fill(); }
+void featFill(hotCtx g) { hctofc(g)->fill(); }
 void featReuse(hotCtx g) { hctofc(g)->reuse(); }
 
 GNode *featSetNewNode(hotCtx g, GID gid) {

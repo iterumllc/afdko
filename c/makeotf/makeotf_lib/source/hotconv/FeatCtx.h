@@ -1,18 +1,25 @@
 
+#pragma once
+
 #include "assert.h"
+#include "map.h"
 #include "feat.h"
+#include "FeatParser.h"
+
+class FeatVisitor;
 
 class FeatCtx {
-    private:
-        hotCtx g;
+    friend class FeatVisitor;
+
     public:
         FeatCtx() = delete;
-        FeatCtx(hotCtx gc) : g(gc) {}
+        FeatCtx(hotCtx gc) : g(gc), visitors() {}
+        ~FeatCtx();
 
 	// Implementations of external calls in feat.h
-        int fill(void) { assert(false); }
+        void fill(void);
         void reuse(void) { assert(false); }
-	GNode *setNewNode(GID gid) { assert(false); }
+        GNode *setNewNode(GID gid) { assert(false); }
         void recycleNodes(GNode *node) { assert(false); }
         GNode **glyphClassCopy(GNode **dst, GNode *src) { assert(false); }
         void glyphDump(GID gid, int ch, int print) { assert(false); }
@@ -26,4 +33,10 @@ class FeatCtx {
         GNode ***makeCrossProduct(GNode *pat, unsigned *n) { assert(false); }
         Label getNextAnonLabel(void) { assert(false); }
         int validateGPOSChain(GNode *targ, int lookupType) { assert(false); }
+
+    private:
+        hotCtx g;
+        // Keep this ordered in case that winds up mattering on destruction
+        std::unordered_map<FeatParser::IncludeContext*, FeatVisitor*> visitors;
+        std::set<Tag> tags;
 };

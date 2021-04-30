@@ -104,10 +104,6 @@ struct cbCtx_ {
 
     struct {                 /* Feature file input */
         char *mainFile;      /* Main feature file name */
-        char *includeDir[4]; /* font dir*/
-        File file;
-        char buf[BUFSIZ];       /* Refill buffer for feature file */
-        dnaDCL(AnonInfo, anon); /* Storage for anon tables */
     } feat;
 
     struct { /* ucs file input/output */
@@ -195,6 +191,7 @@ void message(void *ctx, int type, char *text) {
 
 /* --------------------------- Memory Management --------------------------- */
 
+#if 0
 /* find last path directory separator */
 static char* findDirName(char *path)
 {
@@ -255,6 +252,7 @@ static void CBcbMemFree(void *h, void *ptr) {
         free(ptr);
     }
 }
+#endif
 
 /* ------------------------------- Font Input ------------------------------ */
 
@@ -441,6 +439,13 @@ static char *otfRefill(void *ctx, long *count) {
 
 /* -------------------------- Feature file input --------------------------- */
 
+static char *featTopLevelFile(void *ctx) {
+    cbCtx h = ctx;
+
+    return h->feat.mainFile;
+}
+
+#if 0
 /* Returns mem-allocated path */
 static char *findFeatInclFile(cbCtx h, char *filename) {
     char path[FILENAME_MAX + 1];
@@ -581,7 +586,6 @@ static void featClose(void *ctx) {
     h->feat.file.name = NULL;
 }
 
-#if 0
 #define TAG_ARG(t) (char)((t) >> 24 & 0xff), (char)((t) >> 16 & 0xff), \
                    (char)((t) >> 8 & 0xff), (char)((t)&0xff)
 
@@ -602,7 +606,6 @@ static char *anonRefill(void *ctx, long *count, unsigned long tag) {
     cbFatal(h, "unrecognized anon table tag: %c%c%c%c\n", TAG_ARG(tag));
     return 0; /* Supress compiler warning */
 }
-
 #endif
 
 /* [hot callback] Add anonymous data from feature file */
@@ -1338,9 +1341,6 @@ cbCtx cbNew(char *progname, char *pfbdir, char *otfdir,
         NULL, /* Callback context; set after creation */
         myfatal,
         message,
-        CBcbMemNew,
-        CBcbMemResize,
-        CBcbMemFree,
         psId,
         psRefill,
         cffId,
@@ -1355,9 +1355,7 @@ cbCtx cbNew(char *progname, char *pfbdir, char *otfdir,
         otfTell,
         otfSeek,
         otfRefill,
-        featOpen,
-        featRefill,
-        featClose,
+        featTopLevelFile,
         featAddAnonData,
         tmpOpen,
         tmpWriteN,
@@ -1392,13 +1390,6 @@ cbCtx cbNew(char *progname, char *pfbdir, char *otfdir,
 
     dnaINIT(mainDnaCtx, h->cff.buf, 50000, 150000);
     h->cff.euroAdded = 0;
-    h->feat.includeDir[0] = 0;
-    h->feat.includeDir[1] = 0;
-    h->feat.includeDir[2] = 0;
-    h->feat.includeDir[3] = 0;
-    h->feat.file.name = NULL;
-    dnaINIT(mainDnaCtx, h->feat.anon, 1, 3); /* xxx */
-    h->feat.anon.func = anonInit;
     h->hot.ctx = hotNew(&h->hot.cb);
     dnaINIT(mainDnaCtx, h->tmpbuf, 32, 32);
     h->mac.encoding = NULL;
@@ -1793,19 +1784,6 @@ void cbConvert(cbCtx h, int flags, char *clientVers,
 
     /* Determine dir that feature file's in */
     h->feat.mainFile = featurefile;
-    if (featurefile != NULL) {
-        char *p;
-        p = findDirName(featurefile);
-        if (p == NULL) {
-            h->feat.includeDir[0] = curdir();
-        } else {
-            char featDir[FILENAME_MAX];
-            strncpy(featDir, featurefile, p - featurefile);
-            featDir[p - featurefile] = '\0';
-            copyStr(h, &h->feat.includeDir[0], featDir);
-            freeFeatName = 1;
-        }
-    }
 
     if (type == hotCID) {
         /* Add CMaps */
@@ -1852,11 +1830,6 @@ void cbConvert(cbCtx h, int flags, char *clientVers,
     fileOpen(&h->otf.file, h, otfpath, "w+b");
     hotConvert(h->hot.ctx);
     fileClose(&h->otf.file);
-
-    if (freeFeatName) {
-        cbMemFree(h, h->feat.includeDir[0]);
-    }
-    h->feat.anon.cnt = 0;
 }
 
 // Read font conversion database
@@ -1873,10 +1846,6 @@ void cbFree(cbCtx h) {
     hotFree(h->hot.ctx);
     dnaFREE(h->cff.buf);
     dnaFREE(h->tmpbuf);
-    for (i = 0; i < h->feat.anon.size; i++) {
-        dnaFREE(h->feat.anon.array[i].data);
-    }
-    dnaFREE(h->feat.anon);
 
     // Free database resources
     fcdbFree(h->fcdb.ctx);

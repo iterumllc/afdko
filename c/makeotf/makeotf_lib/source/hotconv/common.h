@@ -74,12 +74,15 @@ typedef uint32_t Tag;
 #define TAG_ARG(t) (char)((t) >> 24 & 0xff), (char)((t) >> 16 & 0xff), \
                    (char)((t) >> 8 & 0xff), (char)((t)&0xff)
 
+extern void *hotMemNew(hotCtx g, size_t s);
+extern void *hotMemResize(hotCtx g, void *old, size_t s);
+extern void hotMemFree(hotCtx g, void *ptr);
 /* Memory management. MEM_FREE() sets its argument to NULL after freeing */
-#define MEM_NEW(g, s) g->cb.malloc(g->cb.ctx, (s))
-#define MEM_RESIZE(g, p, s) g->cb.realloc(g->cb.ctx, (p), (s))
+#define MEM_NEW(g, s) hotMemNew((g), (s))
+#define MEM_RESIZE(g, p, s) hotMemResize((g), (p), (s))
 #define MEM_FREE(g, p)              \
     do {                            \
-        g->cb.free(g->cb.ctx, (p)); \
+        hotMemFree((g), (p));       \
         (p) = NULL;                 \
     } while (0)
 
@@ -328,7 +331,7 @@ typedef struct { /* Font information */
 
 /* -------------------------------- Contexts ------------------------------- */
 typedef struct mapCtx_ *mapCtx;
-typedef void *featCtx;
+typedef void *featVCtx;
 typedef struct otlCtx_ *otlCtx;
 typedef struct BASECtx_ *BASECtx;
 typedef struct CFF_Ctx_ *CFF_Ctx;
@@ -362,7 +365,7 @@ struct hotCtx_ {
         cffCtx cff;
         tcCtx tc;
         mapCtx map;
-        featCtx feat;
+        featVCtx feat;
         otlCtx otl;
         BASECtx BASE;
         CFF_Ctx CFF_;
@@ -394,7 +397,7 @@ struct hotCtx_ {
 };
 
 /* Functions */
-void CDECL hotMsg(hotCtx g, int level, char *fmt, ...);
+void CDECL hotMsg(hotCtx g, int level, const char *fmt, ...);
 void hotQuitOnError(hotCtx g);
 
 void hotOut2(hotCtx g, short value);

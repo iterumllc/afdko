@@ -863,21 +863,20 @@ static ctlMemoryCallbacks tc_dna_memcb;
 
 static void *tc_manage(ctlMemoryCallbacks *cb, void *old, size_t size) {
     tcCtx h = (tcCtx)cb->ctx;
-    tcCallbacks tcb = h->cb;
     void *p = NULL;
     if (size > 0) {
         if (old == NULL) {
-            p = tcb.malloc(tcb.ctx, size);
+            p = tcMemNew(h, size);
             return (p);
         } else {
-            p = tcb.realloc(tcb.ctx, old, size);
+            p = tcMemResize(h, old, size);
             return (p);
         }
     } else {
         if (old == NULL) {
             return NULL;
         } else {
-            tcb.free(tcb.ctx, old);
+            tcMemFree(h, old);
             return NULL;
         }
     }
@@ -885,8 +884,14 @@ static void *tc_manage(ctlMemoryCallbacks *cb, void *old, size_t size) {
 
 /* Create new context */
 tcCtx tcNew(tcCallbacks *cb) {
-    tcCtx g = cb->malloc(cb->ctx, sizeof(struct tcCtx_));
     tcprivCtx h;
+    tcCtx g = malloc(sizeof(struct tcCtx_));
+
+    if ( g == NULL ) {
+        if ( cb->message != NULL )
+            cb->message(cb->ctx, tcFATAL, "out of memory");
+        cb->fatal(cb->ctx);
+    }
 
     g->cb = *cb;
 
@@ -984,7 +989,7 @@ void tcFree(tcCtx g) {
 
     dnaFREE(h->set);
     MEM_FREE(g, h);
-    g->cb.free(g->cb.ctx, g); /* Free context */
+    free(g); /* Free context */
 }
 
 /* Add font to set */
@@ -1048,6 +1053,26 @@ void tcCompactSet(tcCtx g) {
 void tcCompactFont(tcCtx g, long flags) {
     tcAddFont(g, flags);
     tcCompactSet(g);
+}
+
+/* ---------------------------- Utility Functions --------------------------- */
+
+void *tcMemNew(tcCtx g, size_t size) {
+    void *ptr = malloc(size);
+    if ( ptr == NULL )
+        g->cb.message(g->cb.ctx, tcFATAL, "out of memory");
+    return ptr;
+}
+
+void *tcMemResize(tcCtx g, void *old, size_t size) {
+    void *ptr = realloc(old, size);
+    if ( ptr == NULL )
+        g->cb.message(g->cb.ctx, tcFATAL, "out of memory");
+    return ptr;
+}
+
+void tcMemFree(tcCtx g, void *ptr) {
+    free(ptr);
 }
 
 /* ----------------------------- Error handling ---------------------------- */

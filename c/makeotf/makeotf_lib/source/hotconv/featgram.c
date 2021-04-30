@@ -31,7 +31,7 @@
 
 #define MAX_TOKEN 64
 
-extern featCtx h; /* Not reentrant; see featNew() comments */
+extern struct featCtx_ *h; /* Not reentrant; see featNew() comments */
 extern hotCtx g;
 
 typedef union {
@@ -60,7 +60,7 @@ void featureFile(void);
 
 #include "feat.c"
 
-featCtx h; /* Not reentrant; see featNew() comments */
+struct featCtx_ *h; /* Not reentrant; see featNew() comments */
 hotCtx g;
 int sawSTAT = FALSE;
 int sawFeatNames = FALSE;
@@ -4153,7 +4153,7 @@ long nTag;
     {
         int num;
         dnaDCL(short, coord);
-        dnaINIT(g->dnaCtx, coord, 5, 5);
+        dnaINIT(g->DnaCTX, coord, 5, 5);
         zzmatch(T_TAG);
         s = zzaCur;
 
@@ -4207,7 +4207,7 @@ axisSpecs()
     {
         int vert = 0;
         dnaDCL(Tag, tagList);
-        dnaINIT(g->dnaCtx, tagList, 5, 5);
+        dnaINIT(g->DnaCTX, tagList, 5, 5);
         {
             zzBLOCK(zztasp2);
             zzMake0;
@@ -4896,8 +4896,8 @@ axisValue()
         Fixed value, min, max;
         Tag axisTag;
         h->featNameID = 0;
-        dnaINIT(g->dnaCtx, axisTags, 1, 5);
-        dnaINIT(g->dnaCtx, values, 1, 5);
+        dnaINIT(g->DnaCTX, axisTags, 1, 5);
+        dnaINIT(g->DnaCTX, values, 1, 5);
         zzmatch(K_AxisValue);
         zzCONSUME;
         zzmatch(158);

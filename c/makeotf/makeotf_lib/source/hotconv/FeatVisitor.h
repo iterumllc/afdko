@@ -23,7 +23,6 @@ class FeatVisitor : public FeatParserBaseVisitor {
 
         bool ParseAndRegister(bool toplevel);
         bool Translate();
-        static Tag str2tag(const char *tagName);
 
     private:
         virtual antlrcpp::Any visitTag(FeatParser::TagContext *ctx);

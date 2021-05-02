@@ -9,7 +9,7 @@
 #include <stdarg.h>
 #include <stdlib.h>
 #include <stdbool.h>
-#include "map.h"
+#include "hotmap.h"
 #include "otl.h"
 #include "GPOS.h"
 #include "GSUB.h"
@@ -82,8 +82,6 @@ typedef struct {
 typedef struct {
     GNode *targ;
     GNode *repl;
-    unsigned lkpFlag; /* xxx not used for aalt */
-    Label label;      /* xxx not used for aalt */
 } RuleInfo;
 
 /* --- Hash table support --- */
@@ -2047,9 +2045,6 @@ static int getFeatCh(void) {
 int featOpenIncludeFile(hotCtx g, char *filename) {
     featCtx h = g->ctx.feat;
     char *fullpath;
-#if HOT_DEBUG
-    int i;
-#endif
 
     /* Save current file data and close file */
     if (INCL_CNT > 0) {
@@ -2089,7 +2084,7 @@ int featOpenIncludeFile(hotCtx g, char *filename) {
         MEM_FREE(g, filename); /* Was allocated by featTrimParensSpaces() */
     }
 #if HOT_DEBUG
-    for (i = 0; i < INCL_CNT - 1; i++) {
+    for (int i = 0; i < INCL_CNT - 1; i++) {
         DF(3, (stderr, " "));
     }
     DF(3, (stderr, "--- opening [%s]\n", INCL.file));
@@ -2114,8 +2109,7 @@ int featCloseIncludeFile(hotCtx g, int closeMain) {
         return 0;
     } else {
 #if HOT_DEBUG
-        int i;
-        for (i = 0; i < INCL_CNT - 1; i++) {
+        for (int i = 0; i < INCL_CNT - 1; i++) {
             DF(2, (stderr, " "));
         }
         DF(2, (stderr, "--- closing [%s]\n", INCL.file));

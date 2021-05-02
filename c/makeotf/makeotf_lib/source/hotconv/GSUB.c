@@ -9,7 +9,7 @@
 #include "GSUB.h"
 #include "OS_2.h"
 #include "otl.h"
-#include "map.h"
+#include "hotmap.h"
 #include "vmtx.h"
 #include "feat.h"
 #include "common.h"

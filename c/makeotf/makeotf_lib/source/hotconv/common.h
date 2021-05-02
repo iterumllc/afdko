@@ -416,6 +416,8 @@ void hotAddVertOriginY(hotCtx g, GID gid, short value,
 void hotAddVertAdvanceY(hotCtx g, GID gid, short value,
                         char *filename, int linenum);
 
+void setVendId_str(hotCtx g, char *vend);
+
 #ifdef SUNOS
 char *bcopy(const void *src, void *dst, int len);
 

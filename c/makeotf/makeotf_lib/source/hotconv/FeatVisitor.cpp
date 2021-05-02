@@ -76,26 +76,11 @@ antlrcpp::Any FeatVisitor::visitFeatureBlock(FeatParser::FeatureBlockContext *ct
     assert ( ctx->starttag != NULL && ctx->endtag != NULL );
     const char *st_txt = ctx->starttag->getText().c_str();
     const char *et_txt = ctx->endtag->getText().c_str();
-    Tag stag = str2tag(st_txt), etag = str2tag(et_txt);
+    Tag stag = FeatCtx::str2tag(st_txt), etag = FeatCtx::str2tag(et_txt);
 
     if ( stag != etag )
         hotMsg(fc->g, hotWARNING, "Start tag %s does not match end tag %s.", st_txt, et_txt);
 
     std::cout << " FeatureBlock Start Tag = " << st_txt << " End Tag = " << et_txt;
     return visitChildren(ctx);
-}
-
-// Utility
-
-Tag FeatVisitor::str2tag(const char *tagName) {
-    if ( strcmp(tagName, "dflt") == 0 ) {
-        return dflt_;
-    } else {
-        int i;
-        char buf[4];
-        strncpy(buf, tagName, 4);
-        for (i = 3; buf[i] == '\0'; i--)
-            buf[i] = ' ';
-        return TAG(buf[0], buf[1], buf[2], buf[3]);
-    }
 }

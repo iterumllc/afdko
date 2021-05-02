@@ -10,7 +10,7 @@
 
 #include "hotconv.h"
 #include "cmap.h"
-#include "map.h"
+#include "hotmap.h"
 #include "feat.h"
 #include "dynarr.h"
 

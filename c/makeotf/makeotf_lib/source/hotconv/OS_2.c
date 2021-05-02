@@ -7,7 +7,7 @@
  */
 
 #include "OS_2.h"
-#include "map.h"
+#include "hotmap.h"
 
 #include <stdio.h>
 #include <string.h>

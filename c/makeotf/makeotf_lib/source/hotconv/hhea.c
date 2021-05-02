@@ -9,7 +9,7 @@
 
 #include "hhea.h"
 #include "hmtx.h"
-#include "map.h"
+#include "hotmap.h"
 
 #include <math.h>
 #include <float.h>

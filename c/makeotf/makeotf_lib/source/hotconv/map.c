@@ -7,7 +7,7 @@
  * Assigns UVs, feeds cmap module
  */
 
-#include "map.h"
+#include "hotmap.h"
 #include "OS_2.h"
 #include "cmap.h"
 #include "GPOS.h"

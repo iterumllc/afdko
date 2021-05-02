@@ -9,7 +9,7 @@
 #include "OS_2.h"
 
 #include "otl.h"
-#include "map.h"
+#include "hotmap.h"
 #include "feat.h"
 #include "name.h"
 

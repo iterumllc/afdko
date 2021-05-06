@@ -362,15 +362,13 @@ glyphClass[bool named, bool dontcopy, char *gcname]>[GNode *gnode]
 				char *secondPart = p;
 				char *firstPart = p;
 				/* it might be a range.*/
-				zzBLOCK(zztasp4);
-				zzMake0;
 				secondPart = strchr(p, '-');
 				if (secondPart != NULL) {
 					*secondPart = '\0';
 					secondPart++;
 					gid = featMapGName2GID(g, firstPart, FALSE );
 					endgid  = featMapGName2GID(g, secondPart, FALSE );
-					if (gid != 0 && endgid != 0) {
+					if (gid != GID_NOTDEF && endgid != GID_NOTDEF) { // XXX changed
 						gcAddRange(gid, endgid, firstPart, secondPart);
 					}
 					else {
@@ -382,7 +380,6 @@ glyphClass[bool named, bool dontcopy, char *gcname]>[GNode *gnode]
 					featMapGName2GID(g, firstPart, FALSE);
 					hotMsg(g, hotFATAL, "incomplete glyph range or glyph not in font");
 				}
-				zzEXIT(zztasp4);
 			}
 			else
 			>>
@@ -392,7 +389,7 @@ glyphClass[bool named, bool dontcopy, char *gcname]>[GNode *gnode]
 				<<gcAddGlyph(gid);>>
 			)
 			|
-			b:T_GCLASS				<<gcAddGlyphClass($b.text, named);>>
+			b:T_GCLASS				<<gcAddGlyphClass($b.text, named);>> // XXX check for self-named
 		)+
 		"\]"
 

@@ -424,9 +424,9 @@ static int CDECL matchGlyphName(const void *key, const void *value) {
    is present, it considers gname as an alias and uses the "real" name from
    the glyph alias db and sets *useAliasDB to that name. If useAliasDB is
    non-NULL and glyph alias db is not present, sets *useAliasDB to NULL. */
-hotGlyphInfo *mapName2Glyph(hotCtx g, char *gname, char **useAliasDB) {
+hotGlyphInfo *mapName2Glyph(hotCtx g, const char *gname, char **useAliasDB) {
     mapCtx h = g->ctx.map;
-    char *realName = gname;
+    const char *realName = gname;
     hotGlyphInfo **found;
 
     if (IS_CID(g) && useAliasDB == NULL) {
@@ -435,7 +435,7 @@ hotGlyphInfo *mapName2Glyph(hotCtx g, char *gname, char **useAliasDB) {
 
     if (useAliasDB != NULL) {
         if (g->cb.getFinalGlyphName != NULL) {
-            *useAliasDB = g->cb.getFinalGlyphName(g->cb.ctx, gname);
+            *useAliasDB = g->cb.getFinalGlyphName(g->cb.ctx, (char *)gname);
             if (strcmp(*useAliasDB, gname) == 0)
                 *useAliasDB = NULL;
             else
@@ -452,7 +452,7 @@ hotGlyphInfo *mapName2Glyph(hotCtx g, char *gname, char **useAliasDB) {
             return NULL;
         return mapCID2Glyph(g, cid);
     }
-    found = (hotGlyphInfo **)bsearch(realName, h->sort.gname.array,
+    found = (hotGlyphInfo **)bsearch((char *)realName, h->sort.gname.array,
                                      h->sort.gname.cnt, sizeof(hotGlyphInfo *),
                                      matchGlyphName);
     if (found != NULL) {
@@ -477,7 +477,7 @@ void mapGID2Name(hotCtx g, GID gid, char *msg) {
 
 /* Map glyph name to GID; using alias db if present (see mapName2Glyph comments
    for useAliasDB details) */
-GID mapName2GID(hotCtx g, char *gname, char **useAliasDB) {
+GID mapName2GID(hotCtx g, const char *gname, char **useAliasDB) {
     hotGlyphInfo *gi = mapName2Glyph(g, gname, useAliasDB);
     return (gi != NULL) ? GET_GID(gi) : GID_UNDEF;
 }

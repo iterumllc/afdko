@@ -28,24 +28,26 @@ class FeatCtx {
         ~FeatCtx();
 
         // Implementations of external calls in feat.h
-        void fill(void);
-        GNode *setNewNode(GID gid) { assert(false); }
-        void recycleNodes(GNode *node) { assert(false); }
-        GNode **glyphClassCopy(GNode **dst, GNode *src) { assert(false); }
-        void glyphDump(GID gid, int ch, int print) { assert(false); }
-        void glyphClassDump(GNode *gc, int ch, int print) { assert(false); }
-        void patternDump(GNode *pat, int ch, int print) { assert(false); }
-        GNode **patternCopy(GNode **dst, GNode *src, int num) { assert(false); }
-        void extendNodeToClass(GNode *node, int num) { assert(false); }
-        int getGlyphClassCount(GNode *gc) { assert(false); }
-        unsigned int getPatternLen(GNode *pat) { assert(false); }
-        void glyphClassSort(GNode **list, int unique, int reportDups) { assert(false); }
+        void fill();
+        GNode *setNewNode(GID gid);
+        void recycleNodes(GNode *node);
+
+        void dumpGlyph(GID gid, int ch, bool print);
+        void dumpGlyphClass(GNode *gc, int ch, bool print);
+        void dumpPattern(GNode *pat, int ch, bool print);
+
+        GNode **copyGlyphClass(GNode **dst, GNode *src);
+        GNode **copyPattern(GNode **dst, GNode *src, int num);
+        void extendNodeToClass(GNode *node, int num);
+        static int getGlyphClassCount(GNode *gc);
+        static unsigned int getPatternLen(GNode *pat);
+        void sortGlyphClass(GNode **list, int unique, int reportDups);
         GNode ***makeCrossProduct(GNode *pat, unsigned *n) { assert(false); }
-        Label getNextAnonLabel(void) { assert(false); }
         int validateGPOSChain(GNode *targ, int lookupType) { assert(false); }
+        Label getNextAnonLabel();
 
         // Utility
-        static Tag str2tag(std::string &tagName);
+        static Tag str2tag(const std::string &tagName);
         static inline bool is_glyph(GNode *p) {
             return p!=nullptr && p->nextSeq == nullptr && p->nextCl == nullptr &&
                    !(p->flags & FEAT_GCLASS);
@@ -63,6 +65,14 @@ class FeatCtx {
         static inline bool is_unmarked_class(GNode *p) {
             return is_class(p) && !(p->flags & FEAT_HAS_MARKED);
         }
+
+#if HOT_DEBUG
+        void nodeStats();
+        void tagDump(Tag);
+        void stateDump(State &st);
+#endif
+
+        static void initAnchor(AnchorMarkInfo *anchor);
 
     private:
         void setUnicodeRange(short unicodeList[kLenUnicodeList]);
@@ -86,19 +96,22 @@ class FeatCtx {
         long int nAdded2FreeList {0};
         long int nNewFromBlockList {0};
         long int nNewFromFreeList {0};
+        void checkFreeNode(GNode *node);
 #endif
         void addBlock();
         void freeBlocks();
-        GNode *newGNode();
+        GNode *newNodeFromBlock();
+        GNode *newNode();
+        void recycleNode(GNode *pat);
 
         enum gFlagValues { gNone = 0, seenFeature = 1<<0, seenLangSys = 1<<1,
                            seenGDEFGC = 1<<2, seenIgnoreClassFlag = 1<<3,
                            seenMarkClassFlag = 1<<4,
-                           seenNonDFLTScriptFlag = 1<<5 }
-        gFlags {gNone};
+                           seenNonDFLTScriptLang = 1<<5 };
+        unsigned int gFlags {gNone};
        
-        enum fFlagValues { fNone = 0, seenScriptLang = 1<<0, langSysMode = 1<<1 }
-        fFlags {fNone};
+        enum fFlagValues { fNone = 0, seenScriptLang = 1<<0, langSysMode = 1<<1 };
+        unsigned int fFlags {fNone};
 
         // Tag management 
         enum TagType { featureTag, scriptTag, languageTag, tableTag };
@@ -112,26 +125,22 @@ class FeatCtx {
             return true;
         }
 
-        Tag checkTag(TagCtx *start, TagCtx *end, TagType type);
+        bool tagAssign(Tag tag, enum TagType type, bool checkIfDef);
+        void prepRule(Tag newTbl, int newlkpType, GNode *targ, GNode *repl);
 
         struct LangSys {
-            Tag script {TAG_UNDEF};
-            Tag lang {TAG_UNDEF};
-            bool excludeDflt {false};
-            bool operator<(const LangSys& b);
-            //    return script<b.script || (script==b.script && lang<b.lang);
-            bool operator==(const LangSys& b);
-            //    return script==b.script && lang==b.lang;
+            LangSys() = delete;
+            LangSys(Tag script, Tag lang) : script(script), lang(lang), excludeDflt(false) {}
+            Tag script;
+            Tag lang;
+            bool excludeDflt;
+            bool operator<(const LangSys &b) const;
+            bool operator==(const LangSys &b) const;
         };
 
-        struct LangSysHasher {
-            inline size_t operator()(const LangSys &ls) const {
-                uint64_t c = ((uint64_t)ls.script << 32) + ls.lang;
-                return std::hash<uint64_t>{}(c);
-            }
-        };
-
-        std::unordered_set<LangSys, LangSysHasher> LangSysSet;
+        std::set<LangSys> langSysSet;
+        void addLangSys(Tag script, Tag language, bool checkBeforeFeature);
+        void registerFeatureLangSys();
         bool include_dflt = true, seenOldDFLT = false;
 
         struct State {
@@ -143,7 +152,7 @@ class FeatCtx {
             unsigned int lkpFlag {0};
             unsigned short markSetIndex {0};
             Label label {LAB_UNDEF};
-            bool operator==(const State &b);
+            bool operator==(const State &b) const;
         };
         State curr, prev;
         std::vector<State> DFLTLkps; // Maybe change to unordered_set
@@ -151,14 +160,17 @@ class FeatCtx {
         void closeFeatScriptLang(State &st);
 
         struct LookupInfo {
-            Tag tbl {TAG_UNDEF};  // GSUB_ or GPOS_
-            int lkpType {0};      // GSUBsingle, GPOSSingle, etc.
-            unsigned int lkpFlag {0};
-            unsigned short markSetIndex {0};
-            Label label {LAB_UNDEF};
+            Tag tbl;          // GSUB_ or GPOS_
+            int lkpType;      // GSUBsingle, GPOSSingle, etc.
+            unsigned int lkpFlag;
+            unsigned short markSetIndex;
+            Label label;
             bool useExtension;
         };
-        std::vector<LookupInfo> Lookups;
+        std::vector<LookupInfo> lookup;
+
+        void setIDText();
+        bool aaltCheckRule(int type, GNode *targ, GNode *repl);
 
         struct NamedLkp {
             std::string name;
@@ -169,9 +181,12 @@ class FeatCtx {
         // better be zero.
         static_assert( FEAT_NAMED_LKP_BEG == 0 );
         std::vector<NamedLkp> namedLkp;
+        NamedLkp *name2NamedLkp(const std::string lkpName); 
+        NamedLkp *lab2NamedLkp(Label lab); 
+
         // Maintain a string map for faster string-based lookups
         std::unordered_map<std::string, int> namedLkpMap;
-        Label curNamedLkp {LAB_UNDEF};
+        Label currNamedLkp {LAB_UNDEF};
         bool endOfNamedLkpOrRef {false};
 
         Label namedLkpLabelCnt = FEAT_NAMED_LKP_BEG;
@@ -183,14 +198,14 @@ class FeatCtx {
             short y {0};
             unsigned int contourpoint {0};
             bool hasContour {false};
-            bool operator<(const AnchorDef &b); // { return name < b.name; }
+            bool operator<(const AnchorDef &b) const; // { return name < b.name; }
         };
         std::set<AnchorDef> anchorDefs;
 
         struct ValueDef {
             std::string name;
             short metrics[4] { 0, 0, 0, 0 };
-            bool operator<(const ValueDef &b); // { return name < b.name; }
+            bool operator<(const ValueDef &b) const; // { return name < b.name; }
         };
         std::set<ValueDef> valueDefs;
 
@@ -198,19 +213,38 @@ class FeatCtx {
             State state;
             short useExtension {false};
             struct FeatureRecord {
-                Tag feature {TAG_UNDEF};
-                bool used {false};
-                bool operator==(const FeatureRecord &b); // { feature == b.feature; }
+                Tag feature;
+                bool used;
+                bool operator==(const FeatureRecord &b) const;
+                bool operator==(const Tag &b) const;
             };
             std::vector<FeatureRecord> features;
             struct RuleInfo {
-                GNode *targ {nullptr};
-                GNode *repl {nullptr};
+                GNode *targ;
+                GNode *repl;
             };
             std::unordered_map<GID, RuleInfo> rules;
         } aalt;
 
         std::unordered_map<std::string, GNode *> namedGlyphClasses;
+        void resetCurrentGC();
+        void defineCurrentGC(const std::string &gcname);
+        void openAsCurrentGC(const std::string &gcname);
+        GNode *finishCurrentGC();
+        void addGlyphToCurrentGC(GID gid);
+        void addGlyphClassToCurrentGC(GNode *src);
+        void addGlyphClassToCurrentGC(const std::string &gcname);
+        void addAlphaRangeToCurrentGC(GID first, GID last,
+                                      const char *firstname, const char *p,
+                                      char q);
+        void addNumRangeToCurrentGC(GID first, GID last, const char *firstname,
+                                    const char *p1, const char *p2,
+                                    const char *q1, int numLen);
+        void addRangeToCurrentGC(GID first, GID last,
+                                 const std::string &firstName,
+                                 const std::string &lastName);
+        GNode *lookupGlyphClass(const std::string &gcname);
+
         std::vector<GNode *> markClasses;
         std::vector<unsigned short> ligCaretValues;
         std::vector<MetricsInfo> metricsInfos;
@@ -228,9 +262,51 @@ class FeatCtx {
         // IncludeContext NULL being the root visitor
         std::unordered_map<FeatParser::IncludeContext*, FeatVisitor*> visitors;
         CVParameterFormat cvParameters;
-        // GNode **gcInsert;
         // anonData
         // character array nameString
         GNode *ligGlyphs {nullptr};
         unsigned short featNameID {0};
+
+        GID mapGName2GID(const char *gname, bool allowNotdef);
+        inline GID mapGName2GID(const std::string &gname, bool allowNotdef) {
+            return mapGName2GID(gname.c_str(), allowNotdef);
+        }
+        GID cid2gid(const std::string &cidstr);
+        bool compareGlyphClassCount(GNode *targ, GNode *repl, bool isSubrule);
+        void addGSUB(int lkpType, GNode *targ, GNode *repl);
+        void addSub(GNode *targ, GNode *repl, int lkpType);
+        void wrapUpRule();
+
+        bool validateGSUBSingle(GNode *targ, GNode *repl, bool isSubrule);
+        bool validateGSUBMultiple(GNode *targ, GNode *repl, bool isSubrule);
+        bool validateGSUBAlternate(GNode *targ, GNode *repl, bool isSubrule);
+        bool validateGSUBLigature(GNode *targ, GNode *repl, bool isSubrule);
+        bool validateGSUBReverseChain(GNode *targ, GNode *repl);
+        bool validateGSUBChain(GNode *targ, GNode *repl);
+        void subtableBreak();
+        void flagExtension(bool isLookup);
+
+        Label getNextNamedLkpLabel();
+
+        void setLkpFlagAttribute(unsigned short *val, unsigned int attr, unsigned short markAttachClassIndex);
+        void setLkpFlag(unsigned short flagVal);
+        void callLkp(State &st);
+        void useLkp(const std::string name);
+        Label getLabelIndex(const std::string name);
+
+        void startFeature(Tag tag);
+        void endFeature();
+        int startScriptOrLang(TagType type, Tag tag);
+        void startTable(Tag tag);
+
+        void aaltAddFeatureTag(Tag tag);
+        void reportUnusedaaltTags();
+        void aaltRuleSort(GNode **list);
+        void aaltAddAlternates(GNode *targ, GNode *repl);
+        void aaltCreate();
+        void storeRuleInfo(GNode *targ, GNode *repl);
+
+        GNode *curGCHead, **curGCTailAddr;
+        std::string curGCName;
+
 };

@@ -28,7 +28,7 @@ CFLAGS = $(STD_OPTS) $(INC_FLAGS) -DHOT_FEAT_SUPPORT=1 -Wall -std=c99
 
 # PARSE_OBJS = featerr.o featgram.o featscan.o
 
-PARSE_OBJS = FeatLexer.o FeatParser.o FeatParserVisitor.o FeatParserBaseVisitor.o FeatVisitor.o FeatCtx.o
+PARSE_OBJS = FeatLexer.o FeatParser.o FeatVisitor.o FeatCtx.o
 
 OBJS = anon.o BASE.o CFF_.o cmap.o $(PARSE_OBJS) \
        GDEF.o GPOS.o GSUB.o head.o hhea.o hmtx.o hot.o map.o maxp.o \

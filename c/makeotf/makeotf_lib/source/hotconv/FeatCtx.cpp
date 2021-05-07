@@ -42,6 +42,7 @@ FeatCtx::~FeatCtx() {
     for (auto &vit: visitors)
         delete vit.second;
     dnaFREE(cvParameters.charValues);
+    freeBlocks();
 }
 
 void FeatCtx::fill(void) {
@@ -52,11 +53,21 @@ void FeatCtx::fill(void) {
     FeatVisitor *fv = new FeatVisitor(this, strdup(featpathname));
     if ( fv->ParseAndRegister(true) )
         fv->Translate();
-    // hotMsg(g, hotFATAL, "Translation of %s finished \n", featpathname);
-    return;
+
+    // XXX reportOldSyntax();
+
+    aaltCreate();
+
+    if ( gFlags & (seenIgnoreClassFlag | seenMarkClassFlag) )
+        ; // XXX creatDefaultGDEFClasses();
+
+    reportUnusedaaltTags();
+    hotQuitOnError(g);
 }
 
 Tag FeatCtx::str2tag(const std::string &tagName) {
+    if ( tagName.length() > 4 )
+        ; // XXX hotMsg(g, hotERROR, "Tag %s exceeds 4 characters", tagName.c_str);
     if ( tagName == "dflt" ) {
         return dflt_;
     } else {
@@ -511,9 +522,9 @@ void FeatCtx::aaltAddFeatureTag(Tag tag) {
     if (curr.feature != aalt_) {
         ; // XXX featMsg(hotERROR, "\"feature\" statement allowed only in 'aalt' feature");
     } else if ( tag != aalt_ ) {
-        AALT::FeatureRecord t { curr.feature, true };
-        auto it = std::find(aalt.features.begin(), aalt.features.end(), t);
-        if ( it == aalt.features.end() )
+        AALT::FeatureRecord t { tag, true };
+        auto it = std::find(std::begin(aalt.features), std::end(aalt.features), t);
+        if ( it == std::end(aalt.features) )
             aalt.features.push_back(t);
     }
 }
@@ -601,7 +612,7 @@ void FeatCtx::aaltAddAlternates(GNode *targ, GNode *repl) {
             ru = aalt.rules.find(targ->gid);
         }
 
-        auto ri = ru->second;
+        auto &ri = ru->second;
         /* Add alternates to alt set,                 */
         /* checking for uniqueness & preserving order */
         replace = repl;
@@ -609,8 +620,8 @@ void FeatCtx::aaltAddAlternates(GNode *targ, GNode *repl) {
             GNode **lastClass;
             GNode *p;
 
-            auto it = std::find(aalt.features.begin(), aalt.features.end(), curr.feature);
-            assert( it != aalt.features.end() );
+            auto it = std::find(std::begin(aalt.features), std::end(aalt.features), curr.feature);
+            assert( it != std::end(aalt.features) );
 
             if (glyphInClass(replace->gid, &ri.repl, &lastClass)) {
                 short aaltTagIndex;
@@ -653,7 +664,7 @@ void FeatCtx::aaltCreate() {
     // (the latter must not be altered during this function)
     std::vector<AALT::RuleInfo *> sortTmp;
     sortTmp.reserve(aalt.rules.size());
-    for (auto ru : aalt.rules)
+    for (auto &ru : aalt.rules)
         sortTmp.push_back(&ru.second);
 
     /* Sort single subs before alt subs, sort alt subs by targ GID */
@@ -670,7 +681,7 @@ void FeatCtx::aaltCreate() {
                 /* Sort alt sub rules by targ GID XXX not sure this is required now */
                 return aa->targ->gid < bb->targ->gid;
             } else {
-                return a->gid < b->gid; // Just for sake of determinism
+                return false;
             }
         }
     } cmpNode;
@@ -772,8 +783,8 @@ void FeatCtx::storeRuleInfo(GNode *targ, GNode *repl) {
         return; /* No GPOS or except clauses */
     }
     AALT::FeatureRecord t { curr.feature, false };
-    auto f = std::find(aalt.features.begin(), aalt.features.end(), t);
-    if ( curr.feature == aalt_ || f != aalt.features.end() ) {
+    auto f = std::find(std::begin(aalt.features), std::end(aalt.features), t);
+    if ( curr.feature == aalt_ || f != std::end(aalt.features) ) {
         /* Now check if lkpType is appropriate */
 
         switch (curr.lkpType) {
@@ -795,7 +806,7 @@ void FeatCtx::storeRuleInfo(GNode *targ, GNode *repl) {
         }
 
         if (curr.feature != aalt_) {
-            assert( f != aalt.features.end() );
+            assert( f != std::end(aalt.features) );
             f->used = true;
         }
         aaltAddAlternates(targ, repl);
@@ -867,7 +878,7 @@ void FeatCtx::initAnchor(AnchorMarkInfo *anchor) {
 // Returns a glyph node, uninitialized except for flags
 GNode *FeatCtx::newNode() {
     GNode *ret;
-    if (freelist != NULL) {
+    if (freelist != nullptr) {
 #if HOT_DEBUG
         h->nNewFromFreeList++;
 #endif
@@ -991,12 +1002,12 @@ void FeatCtx::recycleNodes(GNode *node) {
     GNode *nextSeq;
     long iterations = 0;
 
-    for (; node != NULL; node = nextSeq) {
+    for (; node != nullptr; node = nextSeq) {
         nextSeq = node->nextSeq;
         GNode *nextCl;
 
         /* Recycle class */
-        for (GNode *cl = node; cl != NULL; cl = nextCl) {
+        for (GNode *cl = node; cl != nullptr; cl = nextCl) {
             nextCl = cl->nextCl;
             recycleNode(cl);
             if (iterations++ > ITERATIONLIMIT) {
@@ -1055,12 +1066,14 @@ GID FeatCtx::cid2gid(const std::string &cidstr) {
 /* --- Glyph class --- */
 
 void FeatCtx::resetCurrentGC() {
+    std::cout << " resetCurrentGC " << std::endl << std::flush;
     assert( curGCHead == nullptr && curGCTailAddr == NULL && curGCName.empty());
     curGCTailAddr = &curGCHead;
 }
 
 void FeatCtx::defineCurrentGC(const std::string &gcname) {
     resetCurrentGC();
+    // XXX probably shouldn't be assertion
     assert( namedGlyphClasses.find(gcname) == namedGlyphClasses.end() );
     curGCName = gcname;
 }
@@ -1072,7 +1085,7 @@ void FeatCtx::openAsCurrentGC(const std::string &gcname) {
         GNode *nextClass = curGCHead = search->second;
         while ( nextClass->nextCl != NULL )
             nextClass = nextClass->nextCl;
-        curGCTailAddr = &nextClass;
+        curGCTailAddr = &nextClass->nextCl;
         // If the class is found don't set curGCName as it doesn't need to
         // be stored on Close.
     } else {
@@ -1255,6 +1268,7 @@ void FeatCtx::addGlyphClassToCurrentGC(const std::string &subGCName) {
 /* If named, return ptr to beginning of gc */
 
 GNode *FeatCtx::finishCurrentGC() {
+    std::cout << " finishCurrentGC " << std::endl << std::flush;
     if ( !curGCName.empty() )
         namedGlyphClasses.insert({curGCName, curGCHead});
 
@@ -1443,7 +1457,7 @@ void FeatCtx::prepRule(Tag newTbl, int newlkpType, GNode *targ, GNode *repl) {
 
     /* Store, if applicable, for GPOSContext and aalt creation */
     if ((!IS_REF_LAB(curr.label)) && (repl != NULL))
-        ; // XXX storeRuleInfo(targ, repl);
+        storeRuleInfo(targ, repl);
 
     /* If h->prev != h->curr (ignoring markSet) */
     if (prev.script != curr.script ||
@@ -1552,7 +1566,6 @@ void FeatCtx::wrapUpRule() {
 
 
 void FeatCtx::addGSUB(int lkpType, GNode *targ, GNode *repl) {
-    std::cout << "addGSUB " << lkpType << std::endl;
     if (aaltCheckRule(lkpType, targ, repl))
         return;
 
@@ -1965,7 +1978,6 @@ void FeatCtx::addSub(GNode *targ, GNode *repl, int lkpType) {
     }
 
     if (lkpType == GSUBChain || (targ->flags & FEAT_IGNORE_CLAUSE)) {
-        std::cout << "chain" << std::endl;
         /* Chain sub exceptions (further analyzed below).                */
         /* "sub f i by fi;" will be here if there was an "except" clause */
 
@@ -1976,27 +1988,22 @@ void FeatCtx::addSub(GNode *targ, GNode *repl, int lkpType) {
             }
         }
     } else if (lkpType == GSUBReverse) {
-        std::cout << "rev" << std::endl;
         if (validateGSUBReverseChain(targ, repl)) {
             addGSUB(GSUBReverse, targ, repl);
         }
     } else if (lkpType == GSUBAlternate) {
-        std::cout << "alt" << std::endl;
         if (validateGSUBAlternate(targ, repl, 0)) {
             addGSUB(GSUBAlternate, targ, repl);
         }
     } else if (targ->nextSeq == NULL && (repl == NULL || repl->nextSeq != NULL)) {
-        std::cout << "mult" << std::endl;
         if (validateGSUBMultiple(targ, repl, 0)) {
             addGSUB(GSUBMultiple, targ, repl);
         }
     } else if (targ->nextSeq == NULL && repl->nextSeq == NULL) {
-        std::cout << "sing" << std::endl;
         if (validateGSUBSingle(targ, repl, 0)) {
             addGSUB(GSUBSingle, targ, repl);
         }
     } else {
-        std::cout << "other" << std::endl;
         GNode *next;
 
         if (validateGSUBLigature(targ, repl, 0)) {
@@ -2171,8 +2178,8 @@ void FeatCtx::useLkp(const std::string name) {
         return;
     } else {
         AALT::FeatureRecord t { curr.feature, false };
-        auto it = std::find(aalt.features.begin(), aalt.features.end(), t);
-        if ( it != aalt.features.end() )
+        auto it = std::find(std::begin(aalt.features), std::end(aalt.features), t);
+        if ( it != std::end(aalt.features) )
             it->used = true;
     }
 

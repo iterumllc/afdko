@@ -23,6 +23,7 @@ STD_OPTS = $(XFLAGS)  \
 	-I$(realpath $(ROOT_DIR)/../public/lib/api) \
 	-I$(realpath $(ROOT_DIR)/../public/lib/resource) \
 	 $(SYS_INCLUDES)
+#	 $(SYS_INCLUDES) -fsanitize=address -fno-omit-frame-pointer
 ifneq ($(strip $(OSX)),) # In order to test under Mac OSX, define OSX in the user environment.
 	STD_OPTS += -DOSX=1
 endif

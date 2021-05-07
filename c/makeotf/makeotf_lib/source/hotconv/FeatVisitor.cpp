@@ -122,6 +122,7 @@ void FeatVisitor::translateGlyphClassAsCurrentGC(FeatParser::GlyphClassContext *
     else
         fc->resetCurrentGC();
 
+    std::cout << " tgcac " << std::flush;
     if ( ctx->gcLiteral() != nullptr ) {
         addGcLiteralToCurrentGC(ctx->gcLiteral());
     } else {
@@ -133,6 +134,7 @@ void FeatVisitor::translateGlyphClassAsCurrentGC(FeatParser::GlyphClassContext *
 }
 
 GNode *FeatVisitor::translateGlyphClass(FeatParser::GlyphClassContext *ctx) {
+    std::cout << " tgc " << std::endl << std::flush;
     translateGlyphClassAsCurrentGC(ctx, nullptr, false);
     return fc->finishCurrentGC();
 }
@@ -188,6 +190,20 @@ antlrcpp::Any FeatVisitor::visitSubstitute(FeatParser::SubstituteContext *ctx) {
 antlrcpp::Any FeatVisitor::visitInclude(FeatParser::IncludeContext *ctx) {
     std::cout << " Include ";
     return visitChildren(ctx);
+}
+
+antlrcpp::Any FeatVisitor::visitFeatureUse(FeatParser::FeatureUseContext *ctx) {
+    std::cout << " FeatureUse ";
+    Tag tag = fc->str2tag(ctx->tag()->getText());
+    fc->aaltAddFeatureTag(tag);
+    return nullptr;
+}
+
+antlrcpp::Any FeatVisitor::visitLangsysAssign(FeatParser::LangsysAssignContext *ctx) {
+    std::cout << " LangsysAssign ";
+    Tag stag = fc->str2tag(ctx->script->getText()), ltag = fc->str2tag(ctx->lang->getText());
+    fc->addLangSys(stag, ltag, true);
+    return nullptr;
 }
 
 antlrcpp::Any FeatVisitor::visitFeatureBlock(FeatParser::FeatureBlockContext *ctx) {

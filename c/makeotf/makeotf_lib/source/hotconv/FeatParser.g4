@@ -46,18 +46,28 @@ substitute: // XXX add except
 	| SUB startpat=pattern ( BY | FROM ) ( KNULL | endpat=pattern )
 ;
 
+featureUse:
+    FEATURE tag
+;
+
 include:
 	INCLUDE I_RPAREN IFILE I_LPAREN
 ;
 
 statement:
-	( substitute
+	( featureUse
+    | substitute
 	| include
 	) SEMI
 ;
 
+langsysAssign:
+    LANGSYS script=tag lang=tag
+;
+
 topLevelStatement:
 	( include
+    | langsysAssign
 	)
 	SEMI
 ;

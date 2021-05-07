@@ -27,6 +27,8 @@ class FeatVisitor : public FeatParserBaseVisitor {
     private:
         antlrcpp::Any visitFeatureBlock(FeatParser::FeatureBlockContext *ctx);
         antlrcpp::Any visitSubstitute(FeatParser::SubstituteContext *ctx);
+        antlrcpp::Any visitLangsysAssign(FeatParser::LangsysAssignContext *ctx);
+        antlrcpp::Any visitFeatureUse(FeatParser::FeatureUseContext *ctx);
         antlrcpp::Any visitInclude(FeatParser::IncludeContext *ctx);
 
         // "Remove" default visitors

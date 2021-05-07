@@ -18,6 +18,7 @@ LIB_DIR = $(ROOT_DIR)/lib/$(PLATFORM)/$(CONFIG)
 
 STD_OPTS = $(XFLAGS) \
 $(SYS_INCLUDES)
+# $(SYS_INCLUDES) -fsanitize=address -fno-omit-frame-pointer
 
 ifneq ($(strip $(OSX)),) # In order to test under Mac OSX, define OSX in the user environment.
 	STD_OPTS += -DOSX=1

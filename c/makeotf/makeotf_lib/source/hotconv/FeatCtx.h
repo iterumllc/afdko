@@ -91,7 +91,7 @@ class FeatCtx {
             long intl {3000};
             long incr {6000};
         } blockList;
-        GNode *freelist;
+        GNode *freelist {nullptr};
 #if HOT_DEBUG
         long int nAdded2FreeList {0};
         long int nNewFromBlockList {0};
@@ -306,7 +306,7 @@ class FeatCtx {
         void aaltCreate();
         void storeRuleInfo(GNode *targ, GNode *repl);
 
-        GNode *curGCHead, **curGCTailAddr;
+        GNode *curGCHead {nullptr}, **curGCTailAddr {nullptr};
         std::string curGCName;
 
 };

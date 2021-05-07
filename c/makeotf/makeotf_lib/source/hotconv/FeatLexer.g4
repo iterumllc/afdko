@@ -7,6 +7,7 @@ FROM		: 'from' ;
 FEATURE		: 'feature';
 SUB		: 'substitute' | 'sub' ;
 REV		: 'reversesub' | 'rsub' ;
+LANGSYS : 'languagesystem' ;
 KNULL   : 'NULL' ;
 INCLUDE		: 'include' -> pushMode(Include) ;
 LCBRACE		: '{' ;

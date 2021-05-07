@@ -1023,7 +1023,7 @@ void hotFree(hotCtx g) {
         }
         dnaFREE(g->font.unenc);
     }
-
+    dnaFree(g->DnaCTX);
     MEM_FREE(g, g);
 }
 

@@ -8,6 +8,11 @@ featureFile:
     )* EOF
 ;
 
+// For include directive in a feature block
+statementFile:
+    statement* EOF
+;
+
 topLevelStatement:
     ( include
     | langsysAssign

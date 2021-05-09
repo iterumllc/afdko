@@ -16,20 +16,20 @@ typedef antlr4::ParserRuleContext *(FeatParser::*FeatParsingEntry)();
 
 class FeatVisitor : public FeatParserBaseVisitor {
     public:
-        enum Stages { Include, Extract };
-        enum EntryPoint { Top };
+        enum EntryPoint { epFeatureFile=1, epFeatureStatement };
         FeatVisitor() = delete;
-        FeatVisitor(FeatCtx *fc, FeatVisitor *parent,
-                    FeatParser::IncludeContext *parent_ctx,
-                    const char *pathname) : fc(fc), parent(parent),
-                                            parent_ctx(parent_ctx),
-                                            pathname(pathname) {
-            fc->current_visitor = this;
-        }
+        FeatVisitor(FeatCtx *fc, const char *pathname,
+                    FeatVisitor *parent = nullptr,
+                    FeatParser::IncludeContext *parent_ctx = nullptr,
+                    EntryPoint ep = epFeatureFile) : fc(fc), pathname(pathname),
+                                                     parent(parent),
+                                                     parent_ctx(parent_ctx),
+                                                     top_ep(ep) { }
         virtual ~FeatVisitor();
 
-        bool Parse(enum EntryPoint ep = Top);
-        bool Translate();
+        void Parse(bool do_includes = true);
+        void Translate();
+
         void newFileMsg(char **msg);
         void tokenPositionMsg(char **msg);
         const char *currentTokStr();
@@ -41,6 +41,7 @@ class FeatVisitor : public FeatParserBaseVisitor {
             inline T* TOK(T* t) { current_msg_token = t->getStart(); return t; }
 
     private:
+        enum Stage { vInclude = 1, vExtract } stage;
 
         struct FeatErrorListener : public antlr4::BaseErrorListener {
             FeatErrorListener() = delete;
@@ -79,18 +80,21 @@ class FeatVisitor : public FeatParserBaseVisitor {
         antlrcpp::Any visitTag(FeatParser::TagContext *ctx) override { assert(false); }
         antlrcpp::Any visitSubtok(FeatParser::SubtokContext *ctx) override { assert(false); }
         antlrcpp::Any visitRevtok(FeatParser::RevtokContext *ctx) override { assert(false); }
-        
+
         // State
         FeatCtx *fc;
+        std::string pathname, dirname;
         FeatVisitor *parent;
         FeatParser::IncludeContext *parent_ctx;
-        std::string pathname, dirname;
 
         antlr4::Token *current_msg_token {nullptr};
 
         std::vector<FeatVisitor *> includes;
-        int current_include {0};
+        size_t current_include {0};
+        enum EntryPoint top_ep, include_ep;
         bool need_file_msg {true};
+
+        bool all_includes_parse {true};
 
         /* It appears that the parse tree is only valid for the lifetime of
          * the parser and the parser is only valid for the lifetime of just

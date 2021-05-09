@@ -47,19 +47,15 @@ void FeatCtx::fill(void) {
     if ( featpathname == nullptr )
         return;
 
-    root_visitor = new FeatVisitor(this, nullptr, nullptr, featpathname);
+    root_visitor = new FeatVisitor(this, featpathname);
 
     root_visitor->Parse();
+
     // Report any parsing errors and quit before moving on to other
     // errors and warnings
-    current_visitor = nullptr;
     hotQuitOnError(g);
 
-    current_visitor = root_visitor;
     root_visitor->Translate();
-
-    // Stop reporting file locations
-    current_visitor = nullptr;
 
     // XXX reportOldSyntax();
 

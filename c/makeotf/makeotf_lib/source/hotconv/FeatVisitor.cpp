@@ -27,7 +27,7 @@ static void assignDirName(const std::string &of, std::string &to) {
     if ( p == nullptr ) {
         to.assign(curdir());
     } else {
-        to.assign(of, (size_t)(p-of.c_str()));
+        to.assign(of, 0, (size_t)(p-of.c_str()));
     }
 }
 
@@ -42,13 +42,13 @@ FeatVisitor::~FeatVisitor() {
     delete input;
 }
 
-bool FeatVisitor::Parse(enum EntryPoint ep) {
+void FeatVisitor::Parse(bool do_includes) {
     std::ifstream stream;
     if ( parent == nullptr ) {
         stream.open(pathname);
         if ( ! stream.is_open() ) {
-            hotMsg(fc->g, hotFATAL, "Specified feature file not found: %s \n", pathname.c_str());
-            return false;
+            fc->featMsg(hotFATAL, "Specified feature file '%s' not found", pathname.c_str());
+            return;
         }
         assignDirName(pathname, dirname);
     } else {
@@ -82,8 +82,10 @@ bool FeatVisitor::Parse(enum EntryPoint ep) {
                 found = true;
             }
         }
-        if ( !found )
-            return false;
+        if ( !found ) {
+            fc->featMsg(hotERROR, "Included feature file '%s' not found", pathname.c_str());
+            return;
+        }
     }
 
     input = new antlr4::ANTLRInputStream(stream);
@@ -93,16 +95,35 @@ bool FeatVisitor::Parse(enum EntryPoint ep) {
     parser->removeErrorListeners();
     FeatErrorListener el{*this};
     parser->addErrorListener(&el);
-    if ( ep == Top ) {
+
+    fc->current_visitor = this;
+
+    if ( top_ep == epFeatureFile ) {
         tree = parser->featureFile();
+    } else if ( top_ep == epFeatureStatement ) {
+        tree = parser->statementFile();
     }
     parser->removeErrorListeners();
-    return tree != nullptr;
+
+    if ( tree == nullptr || !do_includes ) {
+        fc->current_visitor = nullptr;
+        return;
+    }
+
+    stage = vInclude;
+    include_ep = top_ep;
+    tree->accept(this);
+
+    fc->current_visitor = nullptr;
+    return;
 }
 
-bool FeatVisitor::Translate() {
+void FeatVisitor::Translate() {
+    fc->current_visitor = this;
+    stage = vExtract; // This will still parse includes if not already done
+    include_ep = top_ep;
     tree->accept(this);
-    return true;
+    fc->current_visitor = nullptr;
 }
 
 const char *FeatVisitor::currentTokStr() {
@@ -160,12 +181,33 @@ Tag FeatVisitor::checkTag(FeatParser::TagContext *start,
 }
 
 antlrcpp::Any FeatVisitor::visitInclude(FeatParser::IncludeContext *ctx) {
-    // std::cout << " Include ";
-    return visitChildren(ctx);
+    assert( ctx->IFILE() != nullptr );
+    FeatVisitor *inc;
+    if ( includes.size() == current_include ) {
+        inc = new FeatVisitor(fc, TOK(ctx->IFILE())->getText().c_str(), this, ctx,
+                              include_ep);
+        inc->Parse(true);
+        includes.emplace_back(inc);
+        fc->current_visitor = this;
+    } else {
+        assert( includes.size() > current_include );
+        inc = includes[current_include];
+    }
+
+    if ( stage == vExtract ) {
+        inc->Translate();
+        fc->current_visitor = this;
+    }
+
+    current_include++;
+    return nullptr;
 }
 
 antlrcpp::Any FeatVisitor::visitLangsysAssign(FeatParser::LangsysAssignContext *ctx) {
     // std::cout << " LangsysAssign ";
+    if ( stage != vExtract )
+        return nullptr;
+
     Tag stag = fc->str2tag(TOK(ctx->script)->getText());
     Tag ltag = fc->str2tag(ctx->lang->getText());
     fc->addLangSys(stag, ltag, true, ctx->lang);
@@ -173,28 +215,39 @@ antlrcpp::Any FeatVisitor::visitLangsysAssign(FeatParser::LangsysAssignContext *
 }
 
 antlrcpp::Any FeatVisitor::visitFeatureBlock(FeatParser::FeatureBlockContext *ctx) {
-    // XXX assert ( ctx->starttag != nullptr && ctx->endtag != nullptr );
     // std::cout << "FeatureBlock ";
-    Tag t = checkTag(ctx->starttag, ctx->endtag);
-    TOK(ctx);
-    fc->startFeature(t);
+    include_ep = epFeatureStatement;
+    if ( stage == vExtract ) {
+        Tag t = checkTag(ctx->starttag, ctx->endtag);
+        TOK(ctx);
+        fc->startFeature(t);
+    }
 
     for (const auto &i : ctx->statement())
         visitStatement(i);
 
-    TOK(ctx->endtag);
-    fc->endFeature();
+    if ( stage == vExtract ) {
+        TOK(ctx->endtag);
+        fc->endFeature();
+    }
+    include_ep = epFeatureFile;
     return nullptr;
 }
 
 antlrcpp::Any FeatVisitor::visitFeatureUse(FeatParser::FeatureUseContext *ctx) {
-    std::cout << " FeatureUse ";
+    // std::cout << " FeatureUse ";
+    if ( stage != vExtract )
+        return nullptr;
+
     fc->aaltAddFeatureTag(fc->str2tag(TOK(ctx->tag())->getText()));
     return nullptr;
 }
 
 antlrcpp::Any FeatVisitor::visitSubstitute(FeatParser::SubstituteContext *ctx) {
-    std::cout << "Substitute ";
+    // std::cout << "Substitute ";
+    if ( stage != vExtract )
+        return nullptr;
+
     GNode *targ, *repl = nullptr;
     if ( ctx->revtok() != nullptr ) {
         assert( ctx->subtok() == nullptr );
@@ -224,6 +277,7 @@ antlrcpp::Any FeatVisitor::visitSubstitute(FeatParser::SubstituteContext *ctx) {
 
 GNode *FeatVisitor::translatePattern(FeatParser::PatternContext *ctx, bool markedOK) {
     GNode *ret, **insert = &ret;
+    assert( stage == vExtract );
 
     for (auto &pe : ctx->patternElement()) {
         if ( pe->glyph() != nullptr ) {
@@ -246,6 +300,7 @@ GNode *FeatVisitor::translatePattern(FeatParser::PatternContext *ctx, bool marke
 }
 
 GNode *FeatVisitor::translateGlyphClass(FeatParser::GlyphClassContext *ctx) {
+    assert( stage == vExtract );
     translateGlyphClassAsCurrentGC(ctx, nullptr, false);
     TOK(ctx);
     return fc->finishCurrentGC();
@@ -253,6 +308,7 @@ GNode *FeatVisitor::translateGlyphClass(FeatParser::GlyphClassContext *ctx) {
 
 void FeatVisitor::translateGlyphClassAsCurrentGC(FeatParser::GlyphClassContext *ctx,
                                                  const std::string *gcname, bool dontcopy) {
+    assert( stage == vExtract );
     if ( ctx->GCLASS() != nullptr && dontcopy ) {
         fc->openAsCurrentGC(TOK(ctx->GCLASS())->getText());
         return;
@@ -275,6 +331,7 @@ void FeatVisitor::translateGlyphClassAsCurrentGC(FeatParser::GlyphClassContext *
 }
 
 void FeatVisitor::addGcLiteralToCurrentGC(FeatParser::GcLiteralContext *ctx) {
+    assert( stage == vExtract );
     for (auto &gcle : ctx->gcLiteralElement() ) {
         if ( gcle->GCLASS() != nullptr ) {
             fc->addGlyphClassToCurrentGC(TOK(gcle->GCLASS())->getText());
@@ -319,6 +376,7 @@ void FeatVisitor::addGcLiteralToCurrentGC(FeatParser::GcLiteralContext *ctx) {
 }
 
 GID FeatVisitor::getGlyph(FeatParser::GlyphContext *ctx, bool allowNotDef) {
+    assert( stage == vExtract );
     if ( ctx->CID() != nullptr )
         return fc->cid2gid(TOK(ctx->CID())->getText());
     else {

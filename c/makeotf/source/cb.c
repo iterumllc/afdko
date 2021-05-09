@@ -192,21 +192,6 @@ void message(void *ctx, int type, char *text) {
 /* --------------------------- Memory Management --------------------------- */
 
 #if 0
-/* find last path directory separator */
-static char* findDirName(char *path)
-{
-    size_t i = strlen(path);
-    char* end = NULL;
-    while (i > 0)
-    {
-        end = strchr("/\\:", path[--i]);
-        if (end != NULL)
-            break;
-    }
-    if (end != NULL)
-        end = &path[i];
-    return end;
-}
 
 /* Make a copy of a string */
 static void copyStr(cbCtx h, char **dst, char *src) {

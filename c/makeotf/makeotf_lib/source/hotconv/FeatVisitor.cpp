@@ -4,40 +4,100 @@
 #include "GPOS.h"
 #include "GSUB.h"
 
+extern "C" char *curdir();
+extern "C" char *sep();
+
+static const char* findDirName(const char *path)
+{
+    size_t i = strlen(path);
+    const char* end = nullptr;
+    while (i > 0)
+    {
+        end = strchr("/\\:", path[--i]);
+        if (end != nullptr)
+            break;
+    }
+    if (end != nullptr)
+        end = &path[i];
+    return end;
+}
+
+static void assignDirName(const std::string &of, std::string &to) {
+    const char *p = findDirName(of.c_str());
+    if ( p == nullptr ) {
+        to.assign(curdir());
+    } else {
+        to.assign(of, (size_t)(p-of.c_str()));
+    }
+}
+
 FeatVisitor::~FeatVisitor() {
-    free(pathname);
-    free(dirname);
-    // The tree pointer is managed by the parser
+    for (auto i : includes)
+        delete i;
+
+    // The tree pointer itself is managed by the parser
     delete parser;
     delete tokens;
     delete lexer;
     delete input;
 }
 
-bool FeatVisitor::ParseAndRegister(bool toplevel) {
+bool FeatVisitor::Parse(enum EntryPoint ep) {
     std::ifstream stream;
-    FeatParser::IncludeContext *ic = nullptr;
-    if ( toplevel ) {
-        stream.open(pathname, std::ios_base::in);
+    if ( parent == nullptr ) {
+        stream.open(pathname);
         if ( ! stream.is_open() ) {
-            hotMsg(fc->g, hotFATAL, "Specified feature file not found: %s \n", pathname);
+            hotMsg(fc->g, hotFATAL, "Specified feature file not found: %s \n", pathname.c_str());
             return false;
         }
-    } else
-        return false;
+        assignDirName(pathname, dirname);
+    } else {
+        bool found = false;
+        std::string &rootdir = fc->root_visitor->dirname;
+        // Try relative to (potential) UFO fontinfo.plist file
+        stream.open(rootdir + sep() + "fontinfo.plist");
+        if ( stream.is_open() ) {
+            stream.close();
+            dirname = rootdir + sep() + "..";
+            stream.open(dirname + sep() + pathname);
+            found = stream.is_open();
+        }
+        // Try relative to top-level file
+        if ( !found ) {
+            dirname = rootdir;
+            stream.open(dirname + sep() + pathname);
+            found = stream.is_open();
+        }
+        // Try relative to including file
+        if ( !found && rootdir != parent->dirname ) {
+            dirname = parent->dirname;
+            stream.open(dirname + sep() + pathname);
+            found = stream.is_open();
+        }
+        // Try just the pathname
+        if ( !found ) {
+            stream.open(pathname);
+            if ( stream.is_open() ) {
+                assignDirName(pathname, dirname);
+                found = true;
+            }
+        }
+        if ( !found )
+            return false;
+    }
 
     input = new antlr4::ANTLRInputStream(stream);
     lexer = new FeatLexer(input);
     tokens = new antlr4::CommonTokenStream(lexer);
     parser = new FeatParser(tokens);
+    parser->removeErrorListeners();
+    FeatErrorListener el{*this};
+    parser->addErrorListener(&el);
     if ( ep == Top ) {
         tree = parser->featureFile();
     }
-    if (tree != nullptr) {
-        fc->visitors.emplace(ic, this);
-        return true;
-    }
-    return false;
+    parser->removeErrorListeners();
+    return tree != nullptr;
 }
 
 bool FeatVisitor::Translate() {
@@ -45,98 +105,121 @@ bool FeatVisitor::Translate() {
     return true;
 }
 
-Tag FeatVisitor::checkTag(TagCtx *start, TagCtx *end) {
-    assert ( start != nullptr && end != nullptr );
-    std::string st_str = start->getText();
-    std::string et_str = end->getText();
-    Tag stag = fc->str2tag(st_str), etag = fc->str2tag(et_str);
+const char *FeatVisitor::currentTokStr() {
+    if ( current_msg_token == nullptr )
+        return nullptr;
+
+    return current_msg_token->getText().c_str();
+}
+
+void FeatVisitor::newFileMsg(char **msg) {
+    assert( msg != nullptr );
+    if ( need_file_msg ) {
+        *msg = (char *) MEM_NEW(fc->g, pathname.size()+30);
+        sprintf(*msg, "In feature file '%s':", pathname.c_str());
+        need_file_msg = false;
+    } else
+        *msg = nullptr;
+}
+
+void FeatVisitor::tokenPositionMsg(char **msg) {
+    assert( msg != nullptr );
+    if ( current_msg_token != nullptr ) {
+        *msg = (char *) MEM_NEW(fc->g, 50);
+        sprintf(*msg, "[line %5ld char %3ld] ", current_msg_token->getLine(),
+                current_msg_token->getCharPositionInLine()+1);
+    } else
+        *msg = nullptr;
+}
+
+void FeatVisitor::FeatErrorListener::syntaxError(antlr4::Recognizer *,
+                                                 antlr4::Token *t,
+                                                 size_t, size_t,
+                                                 const std::string &msg,
+                                                 std::exception_ptr) {
+    v.TOK(t);
+    // Whatever messages the parser can produce are printed as a group
+    // before processing ends if there are any errors, so here we just
+    // mark them all as ERR instead of FATAL
+    hotMsg(v.fc->g, hotERROR, msg.c_str());
+}
+
+Tag FeatVisitor::checkTag(FeatParser::TagContext *start,
+                          FeatParser::TagContext *end) {
+    Tag stag = TAG_UNDEF, etag = TAG_UNDEF;
+    if ( start != NULL )
+        stag = fc->str2tag(TOK(start)->getText());
+    if ( end != NULL )
+        etag = fc->str2tag(TOK(end)->getText());
 
     if ( stag != etag )
-        hotMsg(fc->g, hotWARNING, "Start tag %s does not match end tag %s.", st_str.c_str(), et_str.c_str());
+        fc->featMsg(hotERROR, "End tag %c%c%c%c does not match start tag %c%c%c%c.",
+                    TAG_ARG(etag), TAG_ARG(stag));
 
     return stag;
 }
 
-GID FeatVisitor::getGlyph(FeatParser::GlyphContext *ctx, bool allowNotDef) {
-    if ( ctx->CID() != nullptr )
-        return fc->cid2gid(ctx->CID()->getText());
-    else {
-        assert( ctx->glyphName() != nullptr );
-        return fc->mapGName2GID(ctx->glyphName()->getText(), allowNotDef);
-    }
+antlrcpp::Any FeatVisitor::visitInclude(FeatParser::IncludeContext *ctx) {
+    // std::cout << " Include ";
+    return visitChildren(ctx);
 }
 
-void FeatVisitor::addGcLiteralToCurrentGC(FeatParser::GcLiteralContext *ctx) {
-    for (auto &gcle : ctx->gcLiteralElement() ) {
-        if ( gcle->GCLASS() != nullptr ) {
-            fc->addGlyphClassToCurrentGC(gcle->GCLASS()->getText());
-        } else {
-            assert ( gcle->startg != nullptr );
-            /* The tokenizing stage doesn't separate a hyphen from a glyph
-             * name if there are no spaces. So startg could be something like
-             * "a-r". If it is then "a-r - z" is an error, so if endg is 
-             * defined we just assume startg is a normal glyphname and let
-             * the calls handle any errors.
-             *
-             * XXX The grammar doesn't currently parse "a- z" as a range. 
-             */
-            if ( gcle->endg != nullptr ) {
-                GID sgid = getGlyph(gcle->startg, false);
-                GID egid = getGlyph(gcle->endg, false);
-                fc->addRangeToCurrentGC(sgid, egid, gcle->startg->getText(),
-                                        gcle->endg->getText());
-            } else {
-                auto g = gcle->startg;
-                GID gid = getGlyph(g, true);
-                if ( gid == GID_UNDEF ) { // Could be a range
-                    // Can't be a CID because that pattern doesn't have a hyphen
-                    assert( g->CID() == nullptr && g->glyphName() != nullptr );
-                    auto gn = g->glyphName()->getText();
-                    auto hpos = gn.find('-');
-                    if ( hpos == std::string::npos ) {
-                        ; // XXX hotMsg(g, hotFATAL, "incomplete glyph range or glyph not in font");
-                        return;
-                    }
-                    auto sgname = gn.substr(0, hpos-1);
-                    auto egname = gn.substr(hpos, std::string::npos);
-                    gid = fc->mapGName2GID(sgname, false);
-                    GID egid = fc->mapGName2GID(egname, false);
-                    // XXX Letting this call handle undefined glyphs
-                    fc->addRangeToCurrentGC(gid, egid, sgname, egname);
-                } else
-                    fc->addGlyphToCurrentGC(gid);
-            }
-        }
-    }
+antlrcpp::Any FeatVisitor::visitLangsysAssign(FeatParser::LangsysAssignContext *ctx) {
+    // std::cout << " LangsysAssign ";
+    Tag stag = fc->str2tag(TOK(ctx->script)->getText());
+    Tag ltag = fc->str2tag(ctx->lang->getText());
+    fc->addLangSys(stag, ltag, true, ctx->lang);
+    return nullptr;
 }
 
-void FeatVisitor::translateGlyphClassAsCurrentGC(FeatParser::GlyphClassContext *ctx,
-                                                 const std::string *gcname, bool dontcopy) {
-    if ( ctx->GCLASS() != nullptr && dontcopy ) {
-        fc->openAsCurrentGC(ctx->GCLASS()->getText());
-        return;
-    }
+antlrcpp::Any FeatVisitor::visitFeatureBlock(FeatParser::FeatureBlockContext *ctx) {
+    // XXX assert ( ctx->starttag != nullptr && ctx->endtag != nullptr );
+    // std::cout << "FeatureBlock ";
+    Tag t = checkTag(ctx->starttag, ctx->endtag);
+    TOK(ctx);
+    fc->startFeature(t);
 
-    if ( gcname != nullptr )
-        fc->defineCurrentGC(*gcname);
-    else
-        fc->resetCurrentGC();
+    for (const auto &i : ctx->statement())
+        visitStatement(i);
 
-    std::cout << " tgcac " << std::flush;
-    if ( ctx->gcLiteral() != nullptr ) {
-        addGcLiteralToCurrentGC(ctx->gcLiteral());
+    TOK(ctx->endtag);
+    fc->endFeature();
+    return nullptr;
+}
+
+antlrcpp::Any FeatVisitor::visitFeatureUse(FeatParser::FeatureUseContext *ctx) {
+    std::cout << " FeatureUse ";
+    fc->aaltAddFeatureTag(fc->str2tag(TOK(ctx->tag())->getText()));
+    return nullptr;
+}
+
+antlrcpp::Any FeatVisitor::visitSubstitute(FeatParser::SubstituteContext *ctx) {
+    std::cout << "Substitute ";
+    GNode *targ, *repl = nullptr;
+    if ( ctx->revtok() != nullptr ) {
+        assert( ctx->subtok() == nullptr );
+        assert( ctx->startpat != nullptr );
+        assert( (ctx->KNULL() != nullptr) != (ctx->endpat != nullptr) );
+
+        targ = translatePattern(ctx->startpat, true);
+        if ( ctx->endpat != nullptr )
+            repl = translatePattern(ctx->endpat, false);
+        TOK(ctx);
+        fc->addSub(targ, repl, GSUBReverse);
     } else {
-        assert( ctx->GCLASS() != nullptr );
-        fc->addGlyphClassToCurrentGC(ctx->GCLASS()->getText());
-    }
-    if ( fc->curGCHead != nullptr )
-        fc->curGCHead->flags |= FEAT_GCLASS;
-}
+        assert( ctx->subtok() != nullptr );
+        assert( ctx->startpat != nullptr );
+        assert( (ctx->BY() != nullptr) != (ctx->FROM() != nullptr) );
+        assert( (ctx->KNULL() != nullptr) != (ctx->endpat != nullptr) );
 
-GNode *FeatVisitor::translateGlyphClass(FeatParser::GlyphClassContext *ctx) {
-    std::cout << " tgc " << std::endl << std::flush;
-    translateGlyphClassAsCurrentGC(ctx, nullptr, false);
-    return fc->finishCurrentGC();
+        int type = ctx->FROM() != nullptr ? GSUBAlternate : 0;
+        targ = translatePattern(ctx->startpat, true);
+        if ( ctx->endpat != nullptr )
+            repl = translatePattern(ctx->endpat, false);
+        TOK(ctx);
+        fc->addSub(targ, repl, type);
+    }
+    return nullptr;
 }
 
 GNode *FeatVisitor::translatePattern(FeatParser::PatternContext *ctx, bool markedOK) {
@@ -152,69 +235,94 @@ GNode *FeatVisitor::translatePattern(FeatParser::PatternContext *ctx, bool marke
         if ( pe->MARKER() != nullptr ) {
             if ( markedOK )
                 (*insert)->flags |= FEAT_MARKED;
-            else
-                ; // XXX error cannot mark a replacement glyph pattern
+            else {
+                TOK(pe->MARKER());
+                fc->featMsg(hotERROR, "cannot mark a replacement glyph pattern");
+            }
         }
         insert = &(*insert)->nextSeq;
     }
     return ret;
 }
 
-antlrcpp::Any FeatVisitor::visitSubstitute(FeatParser::SubstituteContext *ctx) {
-    std::cout << "Substitute ";
-    GNode *targ, *repl = nullptr;
-    if ( ctx->REV() != nullptr ) {
-        assert( ctx->SUB() == nullptr );
-        assert( ctx->startpat != nullptr );
-        assert( (ctx->KNULL() != nullptr) != (ctx->endpat != nullptr) );
+GNode *FeatVisitor::translateGlyphClass(FeatParser::GlyphClassContext *ctx) {
+    translateGlyphClassAsCurrentGC(ctx, nullptr, false);
+    TOK(ctx);
+    return fc->finishCurrentGC();
+}
 
-        targ = translatePattern(ctx->startpat, true);
-        if ( ctx->endpat != nullptr )
-            repl = translatePattern(ctx->endpat, false);
-        fc->addSub(targ, repl, GSUBReverse);
-    } else {
-        assert( ctx->SUB() != nullptr );
-        assert( ctx->startpat != nullptr );
-        assert( (ctx->BY() != nullptr) != (ctx->FROM() != nullptr) );
-        assert( (ctx->KNULL() != nullptr) != (ctx->endpat != nullptr) );
-
-        int type = ctx->FROM() != nullptr ? GSUBAlternate : 0;
-        targ = translatePattern(ctx->startpat, true);
-        if ( ctx->endpat != nullptr )
-            repl = translatePattern(ctx->endpat, false);
-        fc->addSub(targ, repl, type);
+void FeatVisitor::translateGlyphClassAsCurrentGC(FeatParser::GlyphClassContext *ctx,
+                                                 const std::string *gcname, bool dontcopy) {
+    if ( ctx->GCLASS() != nullptr && dontcopy ) {
+        fc->openAsCurrentGC(TOK(ctx->GCLASS())->getText());
+        return;
     }
-    return nullptr;
+
+    TOK(ctx);
+    if ( gcname != nullptr )
+        fc->defineCurrentGC(*gcname);
+    else
+        fc->resetCurrentGC();
+
+    if ( ctx->gcLiteral() != nullptr ) {
+        addGcLiteralToCurrentGC(ctx->gcLiteral());
+    } else {
+        assert( ctx->GCLASS() != nullptr );
+        fc->addGlyphClassToCurrentGC(TOK(ctx->GCLASS())->getText());
+    }
+    if ( fc->curGCHead != nullptr )
+        fc->curGCHead->flags |= FEAT_GCLASS;
 }
 
-antlrcpp::Any FeatVisitor::visitInclude(FeatParser::IncludeContext *ctx) {
-    std::cout << " Include ";
-    return visitChildren(ctx);
+void FeatVisitor::addGcLiteralToCurrentGC(FeatParser::GcLiteralContext *ctx) {
+    for (auto &gcle : ctx->gcLiteralElement() ) {
+        if ( gcle->GCLASS() != nullptr ) {
+            fc->addGlyphClassToCurrentGC(TOK(gcle->GCLASS())->getText());
+        } else {
+            assert ( gcle->startg != nullptr );
+            /* The tokenizing stage doesn't separate a hyphen from a glyph
+             * name if there are no spaces. So startg could be something like
+             * "a-r". If it is then "a-r - z" is an error, so if endg is 
+             * defined we just assume startg is a normal glyphname and let
+             * the calls handle any errors.
+             *
+             * XXX The grammar doesn't currently parse "a- z" as a range. 
+             */
+            if ( gcle->endg != nullptr ) {
+                GID sgid = getGlyph(gcle->startg, false);
+                GID egid = getGlyph(gcle->endg, false);
+                fc->addRangeToCurrentGC(sgid, egid, TOK(gcle->startg)->getText(),
+                                        gcle->endg->getText());
+            } else {
+                auto g = gcle->startg;
+                GID gid = getGlyph(g, true);
+                if ( gid == GID_UNDEF ) { // Could be a range
+                    // Can't be a CID because that pattern doesn't have a hyphen
+                    assert( g->CID() == nullptr && g->glyphName() != nullptr );
+                    auto gn = TOK(g->glyphName())->getText();
+                    auto hpos = gn.find('-');
+                    if ( hpos == std::string::npos ) {
+                        fc->featMsg(hotFATAL, "incomplete glyph range or glyph not in font");
+                        return;
+                    }
+                    auto sgname = gn.substr(0, hpos-1);
+                    auto egname = gn.substr(hpos, std::string::npos);
+                    gid = fc->mapGName2GID(sgname, false);
+                    GID egid = fc->mapGName2GID(egname, false);
+                    // XXX Letting this call handle undefined glyphs
+                    fc->addRangeToCurrentGC(gid, egid, sgname, egname);
+                } else
+                    fc->addGlyphToCurrentGC(gid);
+            }
+        }
+    }
 }
 
-antlrcpp::Any FeatVisitor::visitFeatureUse(FeatParser::FeatureUseContext *ctx) {
-    std::cout << " FeatureUse ";
-    Tag tag = fc->str2tag(ctx->tag()->getText());
-    fc->aaltAddFeatureTag(tag);
-    return nullptr;
-}
-
-antlrcpp::Any FeatVisitor::visitLangsysAssign(FeatParser::LangsysAssignContext *ctx) {
-    std::cout << " LangsysAssign ";
-    Tag stag = fc->str2tag(ctx->script->getText()), ltag = fc->str2tag(ctx->lang->getText());
-    fc->addLangSys(stag, ltag, true);
-    return nullptr;
-}
-
-antlrcpp::Any FeatVisitor::visitFeatureBlock(FeatParser::FeatureBlockContext *ctx) {
-    assert ( ctx->starttag != nullptr && ctx->endtag != nullptr );
-    fc->startFeature(checkTag(ctx->starttag, ctx->endtag));
-
-    std::cout << "FeatureBlock ";
-
-    for (const auto &i : ctx->statement())
-        visitStatement(i);
-
-    fc->endFeature();
-    return nullptr;
+GID FeatVisitor::getGlyph(FeatParser::GlyphContext *ctx, bool allowNotDef) {
+    if ( ctx->CID() != nullptr )
+        return fc->cid2gid(TOK(ctx->CID())->getText());
+    else {
+        assert( ctx->glyphName() != nullptr );
+        return fc->mapGName2GID(TOK(ctx->glyphName())->getText(), allowNotDef);
+    }
 }

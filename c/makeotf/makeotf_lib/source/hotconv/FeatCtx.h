@@ -2,22 +2,20 @@
 #pragma once
 
 #include "assert.h"
-#include <vector>
-#include <string>
 #include <set>
+#include <string>
 #include <unordered_set>
 #include <unordered_map>
+#include <vector>
 
-#include "hotmap.h"
 #include "feat.h"
 #include "FeatParser.h"
+#include "hotmap.h"
 
 #define kLenUnicodeList 128 // number of possible entries in list of Unicode blocks
 #define kLenCodePageList 64 // number of possible entries in list of code  page numbers
 
 class FeatVisitor;
-
-typedef FeatParser::TagContext TagCtx;
 
 class FeatCtx {
     friend class FeatVisitor;
@@ -42,6 +40,7 @@ class FeatCtx {
         static int getGlyphClassCount(GNode *gc);
         static unsigned int getPatternLen(GNode *pat);
         void sortGlyphClass(GNode **list, int unique, int reportDups);
+        void msgPrefix(char **premsg, char **prefix);
         GNode ***makeCrossProduct(GNode *pat, unsigned *n) { assert(false); }
         int validateGPOSChain(GNode *targ, int lookupType) { assert(false); }
         Label getNextAnonLabel();
@@ -113,6 +112,9 @@ class FeatCtx {
         enum fFlagValues { fNone = 0, seenScriptLang = 1<<0, langSysMode = 1<<1 };
         unsigned int fFlags {fNone};
 
+        void CDECL featMsg(int msgType, const char *fmt, ...);
+        const char *tokstr();
+
         // Tag management 
         enum TagType { featureTag, scriptTag, languageTag, tableTag };
         typedef std::unordered_set<Tag> TagArray;
@@ -139,7 +141,8 @@ class FeatCtx {
         };
 
         std::set<LangSys> langSysSet;
-        void addLangSys(Tag script, Tag language, bool checkBeforeFeature);
+        void addLangSys(Tag script, Tag language, bool checkBeforeFeature,
+                        FeatParser::TagContext *langctx = nullptr);
         void registerFeatureLangSys();
         bool include_dflt = true, seenOldDFLT = false;
 
@@ -258,9 +261,7 @@ class FeatCtx {
                kCVParameterLabelEnum };
 
         hotCtx g;
-        // Maps included files to their corresponding visitors, with
-        // IncludeContext NULL being the root visitor
-        std::unordered_map<FeatParser::IncludeContext*, FeatVisitor*> visitors;
+        FeatVisitor *root_visitor {nullptr}, *current_visitor {nullptr};
         CVParameterFormat cvParameters;
         // anonData
         // character array nameString
@@ -308,5 +309,4 @@ class FeatCtx {
 
         GNode *curGCHead {nullptr}, **curGCTailAddr {nullptr};
         std::string curGCName;
-
 };

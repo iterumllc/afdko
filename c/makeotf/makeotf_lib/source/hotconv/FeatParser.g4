@@ -2,12 +2,71 @@ parser grammar FeatParser;
 
 options { tokenVocab = FeatLexer; }
 
-tag:
-	NAMELABEL | EXTNAME | CATCHTAG
+featureFile:
+    ( topLevelStatement
+    | featureBlock
+    )* EOF
 ;
 
-glyphName:
-	ESCGNAME | NAMELABEL | EXTNAME
+topLevelStatement:
+    ( include
+    | langsysAssign
+    )
+    SEMI
+;
+
+include:
+    INCLUDE I_RPAREN IFILE I_LPAREN
+;
+
+langsysAssign:
+    LANGSYS script=tag lang=tag
+;
+
+featureBlock:
+    FEATURE starttag=tag LCBRACE
+    statement+
+    RCBRACE endtag=tag SEMI
+;
+
+statement:
+    ( featureUse
+    | substitute
+    | include
+    ) SEMI
+;
+
+featureUse:
+    FEATURE tag
+;
+
+substitute: // XXX add except
+      revtok startpat=pattern BY ( KNULL | endpat=pattern )
+    | subtok startpat=pattern ( BY | FROM ) ( KNULL | endpat=pattern )
+;
+
+pattern:
+    patternElement+
+;
+
+patternElement: // add lookup
+    ( glyphClass | glyph ) MARKER?
+;
+
+glyphClass:
+    GCLASS | gcLiteral
+;
+
+gcLiteral:
+    LBRACKET gcLiteralElement+ RBRACKET
+;
+
+// The gcLiteral/glyphOrRange grammar parses "a - z" as startg=a and endg=z.
+// In contrast "a-z" is parsed as startg=a-z. The latter must be handled when
+// walking the tree.
+gcLiteralElement:
+    startg=glyph ( HYPHEN endg=glyph )?
+    | GCLASS
 ;
 
 glyph:
@@ -15,71 +74,18 @@ glyph:
     | CID
 ;
 
-// XXX The gcLiteral/glyphOrRange grammar parses "a - z" as
-// a "range" and "a-z" as a "glyph"; the latter must be handled
-// when walking the tree. The grammar doesn't address "a- z",
-// where "a-" will be treated as a glyph but not associated with
-// "z".
-gcLiteralElement:
-    startg=glyph ( HYPHEN endg=glyph )?
-    | GCLASS
+glyphName:
+    ESCGNAME | NAMELABEL | EXTNAME
 ;
 
-gcLiteral:
-    LBRACKET gcLiteralElement+ RBRACKET
+tag:
+    NAMELABEL | EXTNAME | CATCHTAG
 ;
 
-glyphClass:
-	GCLASS | gcLiteral
+subtok:
+    SUB | SUBV
 ;
 
-patternElement: // add lookup
-	( glyph | glyphClass ) MARKER?
-;
-
-pattern:
-	patternElement+
-;
-
-substitute: // XXX add except
-      REV startpat=pattern BY ( KNULL | endpat=pattern )
-	| SUB startpat=pattern ( BY | FROM ) ( KNULL | endpat=pattern )
-;
-
-featureUse:
-    FEATURE tag
-;
-
-include:
-	INCLUDE I_RPAREN IFILE I_LPAREN
-;
-
-statement:
-	( featureUse
-    | substitute
-	| include
-	) SEMI
-;
-
-langsysAssign:
-    LANGSYS script=tag lang=tag
-;
-
-topLevelStatement:
-	( include
-    | langsysAssign
-	)
-	SEMI
-;
-
-featureBlock:
-	FEATURE starttag=tag LCBRACE
-	statement+
-	RCBRACE endtag=tag SEMI
-;
-
-featureFile:
-	( topLevelStatement
-	| featureBlock
-	)* EOF
+revtok:
+    REV | REVV
 ;

@@ -1442,14 +1442,6 @@ void hotQuitOnError(hotCtx g) {
 /* Print note, error, warning, or fatal message (from note buffer is fmt is
    NULL). If note used, handle reuse of g->note. Prepend FontName. */
 void CDECL hotMsg(hotCtx g, int level, const char *fmt, ...) {
-    void (*fatal)(void *) = NULL; /* Suppress optimizer warning */
-    void *ctx = NULL;             /* Suppress optimizer warning */
-
-    if (level == hotFATAL) {
-        fatal = g->cb.fatal;
-        ctx = g->cb.ctx;
-    }
-
     if (g->cb.message != NULL) {
         int lenName = g->font.FontName.cnt + 2;
 
@@ -1477,6 +1469,18 @@ void CDECL hotMsg(hotCtx g, int level, const char *fmt, ...) {
             } else {
                 p = message;
             }
+            const char *premsg, *prefix;
+            featMsgPrefix(g, &premsg, &prefix);
+            // Usually information that the file has changed
+            if ( premsg != NULL )
+                g->cb.message(g->cb.ctx, hotNOTE, premsg);
+
+            if ( prefix != NULL ) {
+                // Usually feature file line and character numbers
+                int l = snprintf(p, p_size, "%s", prefix);
+                p += l;
+                p_size -= l;
+            }
 
             /* xxx If note is used, crop it to MAX_NOTE_LEN. */
             if (g->note.cnt > MAX_NOTE_LEN) {
@@ -1493,12 +1497,10 @@ void CDECL hotMsg(hotCtx g, int level, const char *fmt, ...) {
         }
     }
 
-    if (g->note.cnt != 0) {
-        g->note.cnt = 0;
-    }
+    g->note.cnt = 0;
 
     if (level == hotFATAL) {
-        fatal(ctx); /* hotFree called from within this */
+        g->cb.fatal(g->cb.ctx);
     } else if (level == hotERROR && !g->hadError) {
         g->hadError = 1;
     }

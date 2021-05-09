@@ -38,9 +38,6 @@ FeatCtx::FeatCtx(hotCtx gc) : g{gc} {
 }
 
 FeatCtx::~FeatCtx() {
-    // delete all the file vistors including the root visitor
-    for (auto &vit: visitors)
-        delete vit.second;
     dnaFREE(cvParameters.charValues);
     freeBlocks();
 }
@@ -50,9 +47,19 @@ void FeatCtx::fill(void) {
     if ( featpathname == nullptr )
         return;
 
-    FeatVisitor *fv = new FeatVisitor(this, strdup(featpathname));
-    if ( fv->ParseAndRegister(true) )
-        fv->Translate();
+    root_visitor = new FeatVisitor(this, nullptr, nullptr, featpathname);
+
+    root_visitor->Parse();
+    // Report any parsing errors and quit before moving on to other
+    // errors and warnings
+    current_visitor = nullptr;
+    hotQuitOnError(g);
+
+    current_visitor = root_visitor;
+    root_visitor->Translate();
+
+    // Stop reporting file locations
+    current_visitor = nullptr;
 
     // XXX reportOldSyntax();
 
@@ -62,6 +69,7 @@ void FeatCtx::fill(void) {
         ; // XXX creatDefaultGDEFClasses();
 
     reportUnusedaaltTags();
+
     hotQuitOnError(g);
 }
 
@@ -87,10 +95,12 @@ void FeatCtx::closeFeatScriptLang(State &st) {
     if ( st.tbl == GSUB_) {
         if ( st.lkpType != 0 )
             GSUBLookupEnd(g, st.feature);
+        g->error_id_text[0] = '\0';
         GSUBFeatureEnd(g);
     } else if ( st.tbl == GPOS_) {
         if ( st.lkpType != 0 )
             GPOSLookupEnd(g, st.feature);
+        g->error_id_text[0] = '\0';
         GPOSFeatureEnd(g);
     }
 }
@@ -191,7 +201,7 @@ void FeatCtx::setUnicodeRange(short unicodeList[kLenUnicodeList]) {
             if ((bitnum >= 0) && (bitnum < kLenUnicodeList)) {
                 SET_BIT_ARR(unicodeRange, bitnum);
             } else {
-                ; // XXX featMsg(hotERROR, "OS/2 Bad Unicode block value <%d>. All values must be in [0 ...127] inclusive.", bitnum);
+                featMsg(hotERROR, "OS/2 Bad Unicode block value <%d>. All values must be in [0 ...127] inclusive.", bitnum);
             }
         } else {
             break;
@@ -216,7 +226,7 @@ void FeatCtx::setCodePageRange(short codePageList[kLenCodePageList]) {
             if (validPageBitIndex != kCodePageUnSet) {
                 SET_BIT_ARR(codePageRange, validPageBitIndex);
             } else {
-                ; // XXX featMsg(hotERROR, "OS/2 Code page value <%d> is not permitted according to the OpenType spec v1.4.", pageNumber);
+                featMsg(hotERROR, "OS/2 Code page value <%d> is not permitted according to the OpenType spec v1.4.", pageNumber);
             }
         } else {
             break;
@@ -226,6 +236,17 @@ void FeatCtx::setCodePageRange(short codePageList[kLenCodePageList]) {
     }
 
     OS_2SetCodePageRanges(g, codePageRange[0], codePageRange[1]);
+}
+
+void FeatCtx::msgPrefix(char **premsg, char **prefix) {
+    assert( premsg != nullptr && prefix != nullptr );
+    *premsg = *prefix = nullptr;
+
+    if ( current_visitor == nullptr )
+        return;
+
+    current_visitor->newFileMsg(premsg);
+    current_visitor->tokenPositionMsg(prefix);
 }
 
 void FeatCtx::addBlock() {
@@ -336,10 +357,10 @@ void FeatCtx::registerFeatureLangSys() {
 
 void FeatCtx::startFeature(Tag tag) {
     /* Allow interleaving features */
-    if (! tagAssign(tag, featureTag, true)) {
+    if ( !tagAssign(tag, featureTag, true) ) {
         if (tag != TAG_STAND_ALONE) {
             /* This is normal for standalone lookup blocks- we use the same feature tag for each. */
-            ; // XXX featMsg(hotWARNING, "feature already defined: %s", zzlextext);
+            featMsg(hotWARNING, "feature already defined: %s", tokstr());
         }
     }
 
@@ -349,9 +370,9 @@ void FeatCtx::startFeature(Tag tag) {
     lookup.clear();
     script.clear();
     if (langSysSet.size() == 0) {
+        featMsg(hotWARNING,
+                "[internal] Feature block seen before any language system statement. You should place languagesystem statements before any feature definition");
         addLangSys(DFLT_, dflt_, false);
-        ; /* XXX featMsg(hotWARNING,
-                "[internal] Feature block seen before any language system statement. You should place languagesystem statements before any feature definition", zzlextext); */
     }
     tagAssign(langSysSet.begin()->script, scriptTag, false);
 
@@ -375,14 +396,14 @@ void FeatCtx::endFeature() {
 
 int FeatCtx::startScriptOrLang(TagType type, Tag tag) {
     if (curr.feature == aalt_ || curr.feature == size_) {
-        ; /* XXX featMsg(hotERROR,
+        featMsg(hotERROR,
                 "\"script\" and \"language\" statements "
-                "are not allowed in 'aalt' or 'size' features; " USE_LANGSYS_MSG); */
+                "are not allowed in 'aalt' or 'size' features; " USE_LANGSYS_MSG);
         return -1;
     } else if ((tag != TAG_STAND_ALONE) && (curr.feature == TAG_STAND_ALONE)) {
-        ; /* XXX featMsg(hotERROR,
+        featMsg(hotERROR,
                 "\"script\" and \"language\" statements "
-                "are not allowed within standalone lookup blocks; "); */
+                "are not allowed within standalone lookup blocks; ");
     }
     /*
     if (h->fFlags & FF_LANGSYS_MODE) {
@@ -423,7 +444,7 @@ int FeatCtx::startScriptOrLang(TagType type, Tag tag) {
         assert( type == languageTag );
         if (tag == DFLT_) {
             tag = dflt_;
-            ; // XXX featMsg(hotWARNING, "'DFLT' is not a valid tag for a language statement; using 'dflt'.");
+            featMsg(hotWARNING, "'DFLT' is not a valid tag for a language statement; using 'dflt'.");
         }
 
         /* Once we have seen a script or a language statement other */
@@ -436,34 +457,34 @@ int FeatCtx::startScriptOrLang(TagType type, Tag tag) {
             return 0; /* Statement has no effect */
 
         if (tag == dflt_)
-            ; // XXX zzerr("dflt must precede language-specific behavior");
+            featMsg(hotERROR, "dflt must precede language-specific behavior");
 
         if ( !tagAssign(tag, languageTag, true) )
-            ; // XXX zzerr("language-specific behavior already specified");
+            featMsg(hotERROR, "language-specific behavior already specified");
     }
     return 1;
 }
 
 void FeatCtx::startTable(Tag tag) {
     if ( !tagAssign(tag, tableTag, true) )
-        ; // XXX zzerr("table already specified");
+        featMsg(hotERROR, "table already specified");
 }
 
 void FeatCtx::dumpGlyph(GID gid, int ch, bool print) {
     char msg[512];
     int len;
     if (IS_CID(g)) {
-        sprintf(msg, "\\%hd", mapGID2CID(gid));
+        len = snprintf(msg, 512, "\\%hd", mapGID2CID(gid));
     } else {
         mapGID2Name(g, gid, msg);
+        len = strlen(msg);
     }
-    len = strlen(msg);
     if (ch >= 0) {
         msg[len++] = ch;
     }
+    msg[len] = '\0';
 
     if (print) {
-        msg[len++] = '\0';
         fprintf(stderr, "%s", msg);
     } else {
         strncpy(dnaEXTEND(g->note, len), msg, len);
@@ -520,7 +541,7 @@ void FeatCtx::dumpPattern(GNode *pat, int ch, bool print) {
 
 void FeatCtx::aaltAddFeatureTag(Tag tag) {
     if (curr.feature != aalt_) {
-        ; // XXX featMsg(hotERROR, "\"feature\" statement allowed only in 'aalt' feature");
+        featMsg(hotERROR, "\"feature\" statement allowed only in 'aalt' feature");
     } else if ( tag != aalt_ ) {
         AALT::FeatureRecord t { tag, true };
         auto it = std::find(std::begin(aalt.features), std::end(aalt.features), t);
@@ -532,8 +553,10 @@ void FeatCtx::aaltAddFeatureTag(Tag tag) {
 void FeatCtx::reportUnusedaaltTags() {
     for (auto &f : aalt.features) {
         if ( !f.used ) {
-            hotMsg(g, hotWARNING, // XXX
-                   "feature '%c%c%c%c', referenced in aalt feature, either is not defined or had no rules which could be included in the aalt feature.",
+            featMsg(hotWARNING,
+                    "feature '%c%c%c%c', referenced in aalt feature, either is"
+                    " not defined or had no rules which could be included in"
+                    " the aalt feature.",
                    TAG_ARG(f.feature));
         }
     }
@@ -1039,26 +1062,25 @@ GID FeatCtx::mapGName2GID(const char *gname, bool allowNotdef) {
         return gid;
     }
 
-    /*  XXX
     if (realname != NULL && strcmp(gname, realname) != 0) {
         featMsg(hotERROR, "Glyph \"%s\" (alias \"%s\") not in font",
                 realname, gname);
     } else {
         featMsg(hotERROR, "Glyph \"%s\" not in font.", gname);
-    } */
+    }
     return GID_NOTDEF;
 }
 
 GID FeatCtx::cid2gid(const std::string &cidstr) {
     GID gid = 0; /* Suppress optimizer warning */
     if (!IS_CID(g)) {
-     ; // XXX   zzerr("CID specified for a non-CID font");
+        featMsg(hotERROR, "CID specified for a non-CID font");
     } else {
         int t = strtoll(cidstr.c_str() + 1, NULL, 10); /* Skip initial '\' */
         if (t < 0 || t > 65535)
-            ; // XXX zzerr("not in range 0 .. 65535");
+            featMsg(hotERROR, "CID not in range 0 .. 65535");
         else if ((gid = mapCID2GID(g, t)) == GID_UNDEF)
-        ; // XXX zzerr("CID not found in font");
+            featMsg(hotERROR, "CID not found in font");
     }
     return gid; /* Suppress compiler warning */
 }
@@ -1066,7 +1088,6 @@ GID FeatCtx::cid2gid(const std::string &cidstr) {
 /* --- Glyph class --- */
 
 void FeatCtx::resetCurrentGC() {
-    std::cout << " resetCurrentGC " << std::endl << std::flush;
     assert( curGCHead == nullptr && curGCTailAddr == NULL && curGCName.empty());
     curGCTailAddr = &curGCHead;
 }
@@ -1148,7 +1169,7 @@ void FeatCtx::addNumRangeToCurrentGC(GID first, GID last, const char *firstName,
             gid = last;
         } else {
             if (i == firstNum + 1) {
-                sprintf(fmt, "%%s%%0%dd%%s", numLen);
+                snprintf(fmt, 128, "%%s%%0%dd%%s", numLen);
                 /* Part of glyph name before number; */
                 /* p2 marks post-number              */
                 strncpy(preNum, firstName, p1 - firstName);
@@ -1168,18 +1189,18 @@ void FeatCtx::addNumRangeToCurrentGC(GID first, GID last, const char *firstName,
 void FeatCtx::addRangeToCurrentGC(GID first, GID last, const std::string &firstName,
                                   const std::string &lastName) {
 #define INVALID_RANGE featMsg(hotFATAL, "Invalid glyph range [%s-%s]", \
-                              firstName, lastName)
+                              firstName.c_str(), lastName.c_str())
     if (IS_CID(g)) {
         if (first <= last) {
             for (GID i = first; i <= last; i++) {
                 addGlyphToCurrentGC(i);
             }
         } else {
-            ; // XXX featMsg(hotFATAL, "Bad GID range: %u thru %u", first, last);
+            featMsg(hotFATAL, "Bad GID range: %u thru %u", first, last);
         }
     } else {
         if (firstName.length() != lastName.length()) {
-            ; // XXX INVALID_RANGE;
+            INVALID_RANGE;
         }
 
         /* Enforce glyph range rules */
@@ -1190,7 +1211,7 @@ void FeatCtx::addRangeToCurrentGC(GID first, GID last, const std::string &firstN
             ;
 
         if (*p1 == '\0') {
-            ; // XXX INVALID_RANGE; /* names are same */
+            INVALID_RANGE; /* names are same */
         }
         for (p2 = p1, q2 = q1;
              *p2 != '\0' && *p2 != *q2;
@@ -1199,7 +1220,7 @@ void FeatCtx::addRangeToCurrentGC(GID first, GID last, const std::string &firstN
         /* Both ends of the first difference are now marked. */
         /* The remainder should be the same: */
         if (strcmp(p2, q2) != 0) {
-            ; // XXX INVALID_RANGE;
+            INVALID_RANGE;
         }
 
         /* A difference of up to 3 digits is allowed; 1 for letters */
@@ -1217,7 +1238,7 @@ void FeatCtx::addRangeToCurrentGC(GID first, GID last, const std::string &firstN
                 /* All differences should be digits */
                 for (i = 0; i < p2 - p1; i++) {
                     if (!isdigit(p1[i]) || !isdigit(q1[i])) {
-                        ; // XXX INVALID_RANGE;
+                        INVALID_RANGE;
                     }
                 }
                 /* Search for largest enclosing number */
@@ -1226,7 +1247,7 @@ void FeatCtx::addRangeToCurrentGC(GID first, GID last, const std::string &firstN
                 for (; isdigit(*p2); p2++, q2++) {
                 }
                 if (p2 - p1 > MAX_NUM_LEN) {
-                    ; // XXX INVALID_RANGE;
+                    INVALID_RANGE;
                 } else {
                     addNumRangeToCurrentGC(first, last, fn, p1, p2, q1, p2 - p1);
                     return;
@@ -1234,7 +1255,7 @@ void FeatCtx::addRangeToCurrentGC(GID first, GID last, const std::string &firstN
                 break;
 
             default:
-                ; // XXX INVALID_RANGE;
+                INVALID_RANGE;
         }
     }
 }
@@ -1242,7 +1263,7 @@ void FeatCtx::addRangeToCurrentGC(GID first, GID last, const std::string &firstN
 GNode *FeatCtx::lookupGlyphClass(const std::string &gcname) {
     auto search = namedGlyphClasses.find(gcname);
     if ( search == namedGlyphClasses.end() ) {
-        ; // XXX zzerr("glyph class not defined");
+        featMsg(hotERROR, "glyph class not defined");
         return nullptr;
     }
     return search->second;
@@ -1258,7 +1279,7 @@ void FeatCtx::addGlyphClassToCurrentGC(const std::string &subGCName) {
     auto search = namedGlyphClasses.find(subGCName);
 
     if ( search == namedGlyphClasses.end() ) {
-        ; // XXX zzerr("glyph class not defined");
+        featMsg(hotERROR, "glyph class not defined");
         return;
     }
 
@@ -1268,7 +1289,6 @@ void FeatCtx::addGlyphClassToCurrentGC(const std::string &subGCName) {
 /* If named, return ptr to beginning of gc */
 
 GNode *FeatCtx::finishCurrentGC() {
-    std::cout << " finishCurrentGC " << std::endl << std::flush;
     if ( !curGCName.empty() )
         namedGlyphClasses.insert({curGCName, curGCHead});
 
@@ -1282,35 +1302,39 @@ GNode *FeatCtx::finishCurrentGC() {
 /* Add a language system that all features (that do not contain language or
    script statements) would be registered under */
 
-void FeatCtx::addLangSys(Tag script, Tag language, bool checkBeforeFeature) {
+void FeatCtx::addLangSys(Tag script, Tag language, bool checkBeforeFeature,
+                         FeatParser::TagContext *langctx) {
     if (checkBeforeFeature && gFlags & seenFeature) {
-        ; /* XXX featMsg(hotERROR,
+        featMsg(hotERROR,
                 "languagesystem must be specified before all"
-                " feature blocks"); */
+                " feature blocks");
         return;
     }
     if (!(gFlags & seenLangSys)) {
         gFlags |= seenLangSys;
     } else if (script == DFLT_) {
         if (gFlags & seenNonDFLTScriptLang)
-            ; // XXX featMsg(hotERROR, "All references to the script tag DFLT must precede all other script references.");
+            featMsg(hotERROR, "All references to the script tag DFLT must precede all other script references.");
     } else {
         gFlags |= seenNonDFLTScriptLang;
     }
 
     if (script == dflt_) {
-        ; // XXX featMsg(hotWARNING, "'dflt' is not a valid script tag for a languagesystem statement; using 'DFLT'.");
+        featMsg(hotWARNING, "'dflt' is not a valid script tag for a languagesystem statement; using 'DFLT'.");
         script = DFLT_;
     }
 
+    if ( langctx != NULL )
+        current_visitor->TOK(langctx);
+
     if (language == DFLT_) {
-        ; // XXX featMsg(hotWARNING, "'DFLT' is not a valid language tag for a languagesystem statement; using 'dflt'.");
+        featMsg(hotWARNING, "'DFLT' is not a valid language tag for a languagesystem statement; using 'dflt'.");
         language = dflt_;
     }
 
     /* First check if already exists */
     if ( langSysSet.find({script, language}) != langSysSet.end() ) {
-        ; // XXX featMsg(hotWARNING, "Duplicate specification of language system");
+        featMsg(hotWARNING, "Duplicate specification of language system");
         return;
     }
 
@@ -1335,20 +1359,20 @@ bool FeatCtx::tagAssign(Tag tag, enum TagType type, bool checkIfDef) {
         ta = &script;
         if (tag == dflt_) {
             tag = DFLT_;
-            ; // XXX featMsg(hotWARNING, "'dflt' is not a valid tag for a script statement; using 'DFLT'.");
+            featMsg(hotWARNING, "'dflt' is not a valid tag for a script statement; using 'DFLT'.");
         }
         t = &curr.script;
     } else if (type == languageTag) {
         ta = &language;
         if (tag == DFLT_) {
             tag = dflt_;
-            ; // XXX featMsg(hotWARNING, "'DFLT' is not a valid tag for a language statement; using 'dflt'.");
+            featMsg(hotWARNING, "'DFLT' is not a valid tag for a language statement; using 'dflt'.");
         }
         t = &curr.language;
     } else if (type == tableTag) {
         ta = &table;
     } else if (type != featureTag) {
-        ; // XXX featMsg(hotFATAL, "[internal] unrecognized tag type");
+        featMsg(hotFATAL, "[internal] unrecognized tag type");
         return false;
     }
 
@@ -1429,17 +1453,17 @@ void FeatCtx::prepRule(Tag newTbl, int newlkpType, GNode *targ, GNode *repl) {
     if (currNamedLkp != LAB_UNDEF && IS_NAMED_LAB(curr.label) &&
         !IS_REF_LAB(curr.label) && prev.label == curr.label) {
         if (curr.tbl != prev.tbl || curr.lkpType != prev.lkpType) {
-            ; /*XXX  featMsg(hotFATAL,
+            featMsg(hotFATAL,
                     "Lookup type different from previous "
-                    "rules in this lookup block"); */
+                    "rules in this lookup block");
         } else if (curr.lkpFlag != prev.lkpFlag) {
-            ; /* xXXX featMsg(hotFATAL,
+            featMsg(hotFATAL,
                     "Lookup flags different from previous "
-                    "rules in this block"); */
+                    "rules in this block");
         } else if (curr.markSetIndex != prev.markSetIndex) {
-            ; /* XXX featMsg(hotFATAL,
+            featMsg(hotFATAL,
                     "Lookup flag UseMarkSetIndex different from previous "
-                    "rules in this block"); */
+                    "rules in this block");
         }
     }
 
@@ -1474,7 +1498,7 @@ void FeatCtx::prepRule(Tag newTbl, int newlkpType, GNode *targ, GNode *repl) {
         if (currNamedLkp != LAB_UNDEF && IS_NAMED_LAB(curr.label)) {
             NamedLkp *lkp = lab2NamedLkp(currNamedLkp);
             if (lkp == NULL) {
-                ; // XXX hotMsg(g, hotFATAL, "[internal] label not found\n");
+                featMsg(hotFATAL, "[internal] label not found\n");
             }
             useExtension = lkp->useExtension;
         }
@@ -1502,13 +1526,13 @@ void FeatCtx::prepRule(Tag newTbl, int newlkpType, GNode *targ, GNode *repl) {
     } else {
         /* current state sate is the same for everything except maybe lkpFlag and markSetIndex */
         if (curr.lkpFlag != prev.lkpFlag) {
-            ; /* XXX featMsg(hotFATAL,
+            featMsg(hotFATAL,
                     "Lookup flags different from previous "
-                    "rules in this block"); */
+                    "rules in this block");
         } else if (curr.markSetIndex != prev.markSetIndex) {
-            ; /* XXX featMsg(hotFATAL,
+            featMsg(hotFATAL,
                     "Lookup flag UseMarkSetIndex different from previous "
-                    "rules in this block"); */
+                    "rules in this block");
         }
     }
 }
@@ -1517,17 +1541,19 @@ void FeatCtx::prepRule(Tag newTbl, int newlkpType, GNode *targ, GNode *repl) {
 
 /* Current fea, scr, lan, lkpFlag already set. Need to set label. */
 
-void FeatCtx::setIDText() // XXX
+void FeatCtx::setIDText()
 {
+    int len;
     if (curr.feature == TAG_STAND_ALONE)
-        sprintf(g->error_id_text, "standalone");
+        len = snprintf(g->error_id_text, ID_TEXT_SIZE, "standalone");
     else
-        sprintf(g->error_id_text, "feature '%c%c%c%c'", TAG_ARG(curr.feature));
+        len = snprintf(g->error_id_text, ID_TEXT_SIZE, "feature '%c%c%c%c'",
+                       TAG_ARG(curr.feature));
     if (IS_NAMED_LAB(curr.label))
     {
-        char* p = g->error_id_text + strlen(g->error_id_text);
+        char* p = g->error_id_text + len;
         NamedLkp *curr = lab2NamedLkp(currNamedLkp);
-        sprintf(p, " lookup '%s'", curr->name.c_str());
+        snprintf(p, ID_TEXT_SIZE-len, " lookup '%s'", curr->name.c_str());
     }
 }
 
@@ -1551,11 +1577,11 @@ bool FeatCtx::compareGlyphClassCount(GNode *targ, GNode *repl, bool isSubrule) {
     if (nTarg == nRepl) {
         return true;
     }
-    ; /* XXX featMsg(hotERROR,
+    featMsg(hotERROR,
             "Target glyph class in %srule doesn't have the same"
             " number of elements as the replacement class; the target has %d,"
             " the replacement, %d",
-            isSubrule ? "sub-" : "", nTarg, nRepl); */
+            isSubrule ? "sub-" : "", nTarg, nRepl);
     return false;
 }
 
@@ -1585,9 +1611,9 @@ bool FeatCtx::aaltCheckRule(int type, GNode *targ, GNode *repl) {
             recycleNodes(targ);
             recycleNodes(repl);
         } else {
-            ; /* XXX featMsg(hotWARNING,
+            featMsg(hotWARNING,
                     "Only single and alternate "
-                    "substitutions are allowed within an 'aalt' feature"); */
+                    "substitutions are allowed within an 'aalt' feature");
         }
         return true;
     }
@@ -1600,13 +1626,13 @@ bool FeatCtx::aaltCheckRule(int type, GNode *targ, GNode *repl) {
 
 bool FeatCtx::validateGSUBSingle(GNode *targ, GNode *repl, bool isSubrule) {
     if (!isSubrule && targ->flags & FEAT_MARKED) {
-        ; // XXX featMsg(hotERROR, "Target must not be marked in this rule");
+        featMsg(hotERROR, "Target must not be marked in this rule");
         return false;
     }
 
     if (is_glyph(targ)) {
         if (!is_glyph(repl)) {
-            ; // XXX featMsg(hotERROR, "Replacement in %srule must be a single glyph", isSubrule ? "sub-" : "");
+            featMsg(hotERROR, "Replacement in %srule must be a single glyph", isSubrule ? "sub-" : "");
             return false;
         }
     } else if (repl->nextCl != NULL &&
@@ -1647,12 +1673,12 @@ static bool isUnmarkedGlyphSeq(GNode *node) {
 
 bool FeatCtx::validateGSUBMultiple(GNode *targ, GNode *repl, bool isSubrule) {
     if (!isSubrule && targ->flags & FEAT_MARKED) {
-        ; // XXX featMsg(hotERROR, "Target must not be marked in this rule");
+        featMsg(hotERROR, "Target must not be marked in this rule");
         return false;
     }
 
     if (!((isSubrule || is_glyph(targ)) && isUnmarkedGlyphSeq(repl)) && (repl != NULL || targ->flags & FEAT_LOOKUP_NODE)) {
-        ; // XXX featMsg(hotERROR, "Invalid multiple substitution rule");
+        featMsg(hotERROR, "Invalid multiple substitution rule");
         return false;
     }
     return true;
@@ -1663,22 +1689,22 @@ bool FeatCtx::validateGSUBMultiple(GNode *targ, GNode *repl, bool isSubrule) {
 
 bool FeatCtx::validateGSUBAlternate(GNode *targ, GNode *repl, bool isSubrule) {
     if (!isSubrule && targ->flags & FEAT_MARKED) {
-        ; // XXX featMsg(hotERROR, "Target must not be marked in this rule");
+        featMsg(hotERROR, "Target must not be marked in this rule");
         return false;
     }
 
     if (!is_unmarked_glyph(targ)) {
-        ; /* XXX featMsg(hotERROR,
+        featMsg(hotERROR,
                 "Target of alternate substitution %srule must be a"
                 " single unmarked glyph",
-                isSubrule ? "sub-" : ""); */
+                isSubrule ? "sub-" : "");
         return false;
     }
     if (!is_class(repl)) {
-        ; /* XXX featMsg(hotERROR,
+        featMsg(hotERROR,
                 "Replacement of alternate substitution %srule must "
                 "be a glyph class",
-                isSubrule ? "sub-" : ""); */
+                isSubrule ? "sub-" : "");
         return false;
     }
     return true;
@@ -1690,12 +1716,12 @@ bool FeatCtx::validateGSUBAlternate(GNode *targ, GNode *repl, bool isSubrule) {
 
 bool FeatCtx::validateGSUBLigature(GNode *targ, GNode *repl, bool isSubrule) {
     if (!isSubrule && targ->flags & FEAT_HAS_MARKED) {
-        ; // XXX featMsg(hotERROR, "Target must not be marked in this rule");
+        featMsg(hotERROR, "Target must not be marked in this rule");
         return false;
     }
 
     if (!(is_glyph(repl))) {
-        ; // XXX featMsg(hotERROR, "Invalid ligature %srule replacement", isSubrule ? "sub-" : "");
+        featMsg(hotERROR, "Invalid ligature %srule replacement", isSubrule ? "sub-" : "");
         return false;
     }
     return true;
@@ -1729,9 +1755,9 @@ bool FeatCtx::validateGSUBReverseChain(GNode *targ, GNode *repl) {
         /* Mark rest of glyphs as lookahead */
         for (; p != NULL; p = p->nextSeq) {
             if (p->flags & FEAT_MARKED) {
-                ; /* XXX featMsg(hotERROR,
+                featMsg(hotERROR,
                         "ignore clause may have at most one run "
-                        "of marked glyphs"); */
+                        "of marked glyphs");
                 return false;
             } else {
                 p->flags |= FEAT_LOOKAHEAD;
@@ -1747,7 +1773,7 @@ bool FeatCtx::validateGSUBReverseChain(GNode *targ, GNode *repl) {
                 m = p;
             }
         } else if (p->nextSeq != NULL && p->nextSeq->flags & FEAT_MARKED && nMarked > 0) {
-            ; // XXX featMsg(hotERROR, "Reverse contextual GSUB rule may must have one and only one glyph or class marked for replacement");
+            featMsg(hotERROR, "Reverse contextual GSUB rule may must have one and only one glyph or class marked for replacement");
             return false;
         }
     }
@@ -1768,12 +1794,12 @@ bool FeatCtx::validateGSUBReverseChain(GNode *targ, GNode *repl) {
 #endif
 
     if (repl->nextSeq != NULL) {
-        ; // XXX featMsg(hotERROR, "Reverse contextual GSUB replacement sequence may have only one glyph or class");
+        featMsg(hotERROR, "Reverse contextual GSUB replacement sequence may have only one glyph or class");
         return false;
     }
 
     if (nMarked != 1) {
-        ; // XXX featMsg(hotERROR, "Reverse contextual GSUB rule may must have one and only one glyph or class marked for replacement");
+        featMsg(hotERROR, "Reverse contextual GSUB rule may must have one and only one glyph or class marked for replacement");
         return false;
     }
 
@@ -1803,7 +1829,7 @@ void FeatCtx::subtableBreak() {
     bool retval = false;
 
     if (curr.feature == aalt_ || curr.feature == size_) {
-        ; // XXX featMsg(hotERROR, "\"subtable\" use not allowed in 'aalt' or 'size' feature");
+        featMsg(hotERROR, "\"subtable\" use not allowed in 'aalt' or 'size' feature");
         return;
     }
 
@@ -1812,12 +1838,12 @@ void FeatCtx::subtableBreak() {
     } else if (curr.tbl == GPOS_) {
         retval = GPOSSubtableBreak(g);
     } else {
-        ; // XXX featMsg(hotWARNING, "Statement not expected here");
+        featMsg(hotWARNING, "Statement not expected here");
         return;
     }
 
     if (retval)
-        ; // XXX featMsg(hotWARNING, "subtable break is supported only in class kerning lookups");
+        featMsg(hotWARNING, "subtable break is supported only in class kerning lookups");
 }
 
 /* Indicate current feature or labeled lookup block to be created with
@@ -1828,7 +1854,7 @@ void FeatCtx::flagExtension(bool isLookup) {
         /* lookup block scope */
         NamedLkp *curr = lab2NamedLkp(currNamedLkp);
         if ( curr == nullptr ) {
-            ; // XXX hotMsg(g, hotFATAL, "[internal] label not found\n");
+            featMsg(hotFATAL, "[internal] label not found\n");
         }
         curr->useExtension = true;
     } else {
@@ -1836,9 +1862,9 @@ void FeatCtx::flagExtension(bool isLookup) {
         if (curr.feature == aalt_) {
             aalt.useExtension = true;
         } else {
-            ; /* XXX featMsg(hotERROR,
+            featMsg(hotERROR,
                     "\"useExtension\" allowed in feature-scope only"
-                    " for 'aalt'"); */
+                    " for 'aalt'");
         }
     }
 }
@@ -1872,9 +1898,9 @@ bool FeatCtx::validateGSUBChain(GNode *targ, GNode *repl) {
         /* Mark rest of glyphs as lookahead */
         for (; p != NULL; p = p->nextSeq) {
             if (p->flags & FEAT_MARKED) {
-                ; /* XXX featMsg(hotERROR,
+                featMsg(hotERROR,
                         "ignore clause may have at most one run "
-                        "of marked glyphs"); */
+                        "of marked glyphs");
                 return false;
             } else {
                 p->flags |= FEAT_LOOKAHEAD;
@@ -1882,17 +1908,17 @@ bool FeatCtx::validateGSUBChain(GNode *targ, GNode *repl) {
         }
         return 1;
     } else if ((repl == NULL) && (!hasDirectLookups)) {
-        ; // XXX featMsg(hotERROR, "contextual substitution clause must have a replacement rule or direct lookup reference.");
+        featMsg(hotERROR, "contextual substitution clause must have a replacement rule or direct lookup reference.");
         return false;
     }
 
     if (hasDirectLookups) {
         if (repl != NULL) {
-            ; // XXX featMsg(hotERROR, "contextual substitution clause cannot both have a replacement rule and a direct lookup reference.");
+            featMsg(hotERROR, "contextual substitution clause cannot both have a replacement rule and a direct lookup reference.");
             return false;
         }
         if (!(targ->flags & FEAT_HAS_MARKED)) {
-            ; // XXX featMsg(hotERROR, "The  direct lookup reference in a contextual substitution clause must be marked as part of a contextual input sequence.");
+            featMsg(hotERROR, "The  direct lookup reference in a contextual substitution clause must be marked as part of a contextual input sequence.");
             return false;
         }
     }
@@ -1904,10 +1930,10 @@ bool FeatCtx::validateGSUBChain(GNode *targ, GNode *repl) {
                 m = p;
             }
         } else if (p->lookupLabelCount > 0) {
-            ; // XXX featMsg(hotERROR, "The  direct lookup reference in a contextual substitution clause must be marked as part of a contextual input sequence.");
+            featMsg(hotERROR, "The  direct lookup reference in a contextual substitution clause must be marked as part of a contextual input sequence.");
             return false;
         } else if (p->nextSeq != NULL && p->nextSeq->flags & FEAT_MARKED && nMarked > 0) {
-            ; // XXX featMsg(hotERROR, "Unsupported contextual GSUB target sequence");
+            featMsg(hotERROR, "Unsupported contextual GSUB target sequence");
             return false;
         }
     }
@@ -1925,7 +1951,7 @@ bool FeatCtx::validateGSUBChain(GNode *targ, GNode *repl) {
     if (repl) {
         if (nMarked == 1) {
             if (is_glyph(m) && is_class(repl)) {
-                ; // XXX featMsg(hotERROR, "Contextual alternate rule not yet supported");
+                featMsg(hotERROR, "Contextual alternate rule not yet supported");
                 return false;
             }
 
@@ -1938,7 +1964,7 @@ bool FeatCtx::validateGSUBChain(GNode *targ, GNode *repl) {
             }
         } else if (nMarked > 1) {
             if (repl->nextSeq != NULL) {
-                ; // XXX featMsg(hotERROR, "Unsupported contextual GSUB replacement sequence");
+                featMsg(hotERROR, "Unsupported contextual GSUB replacement sequence");
                 return false;
             }
 
@@ -2041,20 +2067,19 @@ void FeatCtx::addSub(GNode *targ, GNode *repl, int lkpType) {
 
 Label FeatCtx::getNextNamedLkpLabel() {
     if (namedLkpLabelCnt > FEAT_NAMED_LKP_END) {
-        ; /* XXX featMsg(hotFATAL,
+        featMsg(hotFATAL,
                 "[internal] maximum number of named lookups reached:"
                 " %d",
-                FEAT_NAMED_LKP_END - FEAT_NAMED_LKP_BEG + 1); */
+                FEAT_NAMED_LKP_END - FEAT_NAMED_LKP_BEG + 1);
     }
     return namedLkpLabelCnt++;
 }
 
 Label FeatCtx::getNextAnonLabel() {
     if (anonLabelCnt > FEAT_ANON_LKP_END) {
-        ; /* XXX hotMsg(g, hotFATAL,
-               "[internal] maximum number of lookups reached:"
-               " %d",
-               FEAT_ANON_LKP_END - FEAT_ANON_LKP_BEG + 1); */
+        featMsg(hotFATAL,
+                "[internal] maximum number of lookups reached: %d",
+                FEAT_ANON_LKP_END - FEAT_ANON_LKP_BEG + 1);
     }
     return anonLabelCnt++;
 }
@@ -2071,24 +2096,24 @@ void FeatCtx::setLkpFlagAttribute(unsigned short *val, unsigned int attr,
 
     if (attr == otlMarkAttachmentType) {
         if (markAttachClassIndex == 0) {
-            ; // XXX featMsg(hotERROR, "must specify non-zero MarkAttachmentType value");
+            featMsg(hotERROR, "must specify non-zero MarkAttachmentType value");
         } else if (*val & attr) {
-            ; /* XXX featMsg(hotERROR,
-                    "MarkAttachmentType already specified in this statement"); */
+            featMsg(hotERROR,
+                    "MarkAttachmentType already specified in this statement");
         } else {
             *val |= (markAttachClassIndex & 0xFF) << 8;
         }
     } else if (attr == otlUseMarkFilteringSet) {
         if (*val & attr) {
-            ; /* XXX featMsg(hotERROR,
-                    "UseMarkSetType already specified in this statement"); */
+            featMsg(hotERROR,
+                    "UseMarkSetType already specified in this statement");
         }
         curr.markSetIndex = markAttachClassIndex;
         *val |= attr;
     } else {
         if (*val & attr) {
-            ; /* XXX featMsg(hotWARNING,
-                    "\"%s\" repeated in this statement; ignoring", zzlextext); */
+            featMsg(hotWARNING,
+                    "\"%s\" repeated in this statement; ignoring", tokstr());
         } else {
             *val |= attr;
         }
@@ -2098,8 +2123,8 @@ void FeatCtx::setLkpFlagAttribute(unsigned short *val, unsigned int attr,
 void FeatCtx::setLkpFlag(unsigned short flagVal) {
     unsigned short flag = flagVal;
     if (curr.feature == aalt_ || curr.feature == size_) {
-        ; /* XXX featMsg(hotERROR,
-                "\"lookupflag\" use not allowed in 'aalt' or 'size' feature"); */
+        featMsg(hotERROR,
+                "\"lookupflag\" use not allowed in 'aalt' or 'size' feature");
     } else if (flag == curr.lkpFlag) {
         ; /* Statement has no effect */
     } else {
@@ -2174,7 +2199,7 @@ void FeatCtx::useLkp(const std::string name) {
     NamedLkp *lkp = name2NamedLkp(name);
 
     if (curr.feature == aalt_) {
-        ; // XXX featMsg(hotERROR, "\"lookup\" use not allowed in 'aalt' feature");
+        featMsg(hotERROR, "\"lookup\" use not allowed in 'aalt' feature");
         return;
     } else {
         AALT::FeatureRecord t { curr.feature, false };
@@ -2184,14 +2209,14 @@ void FeatCtx::useLkp(const std::string name) {
     }
 
     if (curr.feature == size_) {
-        ; /* XXX featMsg(hotERROR,
+        featMsg(hotERROR,
                 "\"lookup\" use not allowed anymore in 'size'"
-                " feature; " USE_LANGSYS_MSG); */
+                " feature; " USE_LANGSYS_MSG);
         return;
     }
 
     if (lkp == NULL) {
-        ; // XXX featMsg(hotERROR, "lookup name \"%s\" not defined", name);
+        featMsg(hotERROR, "lookup name \"%s\" not defined", name.c_str());
     } else {
         callLkp(lkp->state);
     }
@@ -2200,7 +2225,7 @@ void FeatCtx::useLkp(const std::string name) {
 Label FeatCtx::getLabelIndex(const std::string name) {
     NamedLkp *curr = name2NamedLkp(name);
     if (curr == NULL) {
-        ; // XXX featMsg(hotFATAL, "lookup name \"%s\" not defined", name);
+        featMsg(hotFATAL, "lookup name \"%s\" not defined", name.c_str());
     }
     return curr->state.label;
 }
@@ -2249,16 +2274,15 @@ void FeatCtx::sortGlyphClass(GNode **list, int unique, int reportDups) {
                 tmp->nextCl = NULL;
                 tmp->nextSeq = NULL;
 
-                /* if INCL_CNT is zero, we are being called after the   */
-                /* feature files have been closed. In this case, we are */
-                /* sorting GDEF classes, and duplicates don't need a    */
-                /* warning.                                             */
-                /* XXX
-                if ((INCL_CNT > 0) && reportDups) {
+                /* If current_visitor is null we are being called after the
+                 * feature files have been closed. In this case, we are
+                 * sorting GDEF classes, and duplicates don't need a
+                 * warning. */
+                if ( current_visitor != nullptr && reportDups ) {
                     dumpGlyph(tmp->gid, '\0', 0);
-                    ; featMsg(hotNOTE, "Removing duplicate glyph <%s>",
+                    featMsg(hotNOTE, "Removing duplicate glyph <%s>",
                             g->note.array);
-                } */
+                }
                 recycleNodes(tmp);
             } else {
                 p = p->nextCl;
@@ -2272,6 +2296,25 @@ void FeatCtx::sortGlyphClass(GNode **list, int unique, int reportDups) {
     p->nextSeq = nextTarg;
     p->metricsInfo = metricsInfo;
     p->markClassName = markClassName;
+}
+
+void FeatCtx::featMsg(int msgType, const char *fmt, ...) {
+    va_list ap;
+    std::string buf;
+
+    va_start(ap, fmt);
+    buf.reserve(128);
+    int l = VSPRINTF_S(&buf[0], 128, fmt, ap) + 1;
+    if ( l > 128 ) {
+        buf.reserve(l);
+        VSPRINTF_S(&buf[0], l, fmt, ap);
+    }
+    hotMsg(g, msgType, buf.c_str());
+}
+
+const char *FeatCtx::tokstr() {
+    assert( current_visitor != NULL );
+    return current_visitor->currentTokStr();
 }
 
 inline FeatCtx *hctofc(hotCtx g) {
@@ -2343,6 +2386,10 @@ unsigned int featGetPatternLen(hotCtx g, GNode *pat) {
 
 void featGlyphClassSort(hotCtx g, GNode **list, int unique, int reportDups) {
     hctofc(g)->sortGlyphClass(list, unique, reportDups);
+}
+
+void featMsgPrefix(hotCtx g, char **premsg, char **prefix) {
+    hctofc(g)->msgPrefix(premsg, prefix);
 }
 
 GNode ***featMakeCrossProduct(hotCtx g, GNode *pat, unsigned *n) {

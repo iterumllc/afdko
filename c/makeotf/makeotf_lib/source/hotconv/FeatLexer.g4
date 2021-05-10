@@ -2,27 +2,7 @@ lexer grammar FeatLexer;
 import FeatLexerBase;
 
 @members {
-    std::string anon_tag;
-    bool is_anon_close(const std::string &str) {
-        std::cout << "here " << str << std::endl;
-        auto i = str.begin();
-        if ( *i == '\r' )
-            i++;
-        if ( *i++ != '\n' )
-            return false;
-        if ( *i++ != '}' )
-            return false;
-        while ( *i == ' ' || *i == '\t' )
-            i++;
-        if ( str.compare(i-str.begin(), anon_tag.size(), anon_tag)!=0 )
-            return false;
-        i += anon_tag.size();
-        while ( *i == ' ' || *i == '\t' )
-            i++;
-        if ( *i != ';' )
-            return false;
-        return true;
-    }
+ std::string anon_tag;
 }
 
 ANON        : 'anon' -> pushMode(Anon) ;
@@ -36,5 +16,8 @@ A_LBRACE    : '{' -> mode(AnonContent) ;
 
 mode AnonContent;
 
-A_CLOSE    : '\r'? '\n}' [ \t]* TSTART+ [ \t]* ';' {is_anon_close(getText())}? -> popMode ;
+// The only TSTART characters allowed in the closing line
+// must be grouped together, so just search for that
+// string in A_CLOSE as the semantic predicate.
+A_CLOSE    : '\r'? '\n}' [ \t]* TSTART+ [ \t]* ';' {getText().find(anon_tag) != std::string::npos}? -> popMode ;
 A_LINE     : '\r'? '\n' ~[\r\n]* ;

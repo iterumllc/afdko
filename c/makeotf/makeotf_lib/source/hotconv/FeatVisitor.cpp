@@ -243,8 +243,6 @@ antlrcpp::Any FeatVisitor::visitAnonBlock(FeatParser::AnonBlockContext *ctx) {
     for (auto al : ctx->A_LINE())
         buf += al->getText();
 
-    std::cout << "Tag = " << ctx->A_LABEL()->getText() << std::endl << ">>>>>>>>>>>>>>>>>>" << std::endl << buf << std::endl << "<<<<<<<<<<<<<<<<<<<<<<<<" << std::endl;
-
     TOK(ctx);
     fc->g->cb.featAddAnonData(fc->g->cb.ctx, buf.c_str(), buf.size(), tag);
     return nullptr;

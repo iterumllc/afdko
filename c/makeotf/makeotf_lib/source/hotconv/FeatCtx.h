@@ -263,8 +263,7 @@ class FeatCtx {
         hotCtx g;
         FeatVisitor *root_visitor {nullptr}, *current_visitor {nullptr};
         CVParameterFormat cvParameters;
-        // anonData
-        // character array nameString
+
         GNode *ligGlyphs {nullptr};
         unsigned short featNameID {0};
 
@@ -306,6 +305,8 @@ class FeatCtx {
         void aaltAddAlternates(GNode *targ, GNode *repl);
         void aaltCreate();
         void storeRuleInfo(GNode *targ, GNode *repl);
+
+        void reportOldSyntax();
 
         GNode *curGCHead {nullptr}, **curGCTailAddr {nullptr};
         std::string curGCName;

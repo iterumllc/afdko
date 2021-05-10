@@ -57,7 +57,7 @@ void FeatCtx::fill(void) {
 
     root_visitor->Translate();
 
-    // XXX reportOldSyntax();
+    reportOldSyntax();
 
     aaltCreate();
 
@@ -2292,6 +2292,26 @@ void FeatCtx::sortGlyphClass(GNode **list, int unique, int reportDups) {
     p->nextSeq = nextTarg;
     p->metricsInfo = metricsInfo;
     p->markClassName = markClassName;
+}
+
+/* Emit report on any deprecated feature file syntax encountered */
+
+void FeatCtx::reportOldSyntax() {
+    if (syntax.numExcept > 0) {
+        int one = syntax.numExcept == 1;
+
+        featMsg(hotNOTE,
+               "There %s %hd instance%s of the deprecated \"except\" syntax in the"
+               " feature file. Though such statements are processed correctly by"
+               " this parser for backward compatibility, please update them to the"
+               " newer \"ignore substitute\" syntax. For example, change \"except a @LET"
+               " sub a by a.end;\" to \"ignore sub a @LET; sub a' by a.end;\". (Note that"
+               " the second rule is now required to be marked to identify it as a Chain"
+               " Contextual and not a Single Substitution rule.)",
+               one ? "is" : "are",
+               syntax.numExcept,
+               one ? "" : "s");
+    }
 }
 
 void FeatCtx::featMsg(int msgType, const char *fmt, ...) {

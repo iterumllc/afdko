@@ -594,7 +594,7 @@ static char *anonRefill(void *ctx, long *count, unsigned long tag) {
 #endif
 
 /* [hot callback] Add anonymous data from feature file */
-static void featAddAnonData(void *ctx, char *data, long count,
+static void featAddAnonData(void *ctx, const char *data, long count,
                             unsigned long tag) {
 #if 0
     /* Sample code for adding anonymous tables */

@@ -234,6 +234,22 @@ antlrcpp::Any FeatVisitor::visitFeatureBlock(FeatParser::FeatureBlockContext *ct
     return nullptr;
 }
 
+antlrcpp::Any FeatVisitor::visitAnonBlock(FeatParser::AnonBlockContext *ctx) {
+    if ( stage != vExtract )
+        return nullptr;
+
+    Tag tag = fc->str2tag(TOK(ctx->A_LABEL())->getText());
+    std::string buf;
+    for (auto al : ctx->A_LINE())
+        buf += al->getText();
+
+    std::cout << "Tag = " << ctx->A_LABEL()->getText() << std::endl << ">>>>>>>>>>>>>>>>>>" << std::endl << buf << std::endl << "<<<<<<<<<<<<<<<<<<<<<<<<" << std::endl;
+
+    TOK(ctx);
+    fc->g->cb.featAddAnonData(fc->g->cb.ctx, buf.c_str(), buf.size(), tag);
+    return nullptr;
+}
+
 antlrcpp::Any FeatVisitor::visitFeatureUse(FeatParser::FeatureUseContext *ctx) {
     // std::cout << " FeatureUse ";
     if ( stage != vExtract )

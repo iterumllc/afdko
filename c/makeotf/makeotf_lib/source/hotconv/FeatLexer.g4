@@ -1,47 +1,40 @@
 lexer grammar FeatLexer;
+import FeatLexerBase;
 
-COMMENT		: '#' ~[\r\n]* -> skip ;
-WHITESPACE	: [ \t\r\n]+ -> skip ;
-BY		: 'by' ;
-FROM		: 'from' ;
-FEATURE		: 'feature';
-SUB		: 'substitute' ;
-SUBV		: 'sub' ;
-REV		: 'reversesub' ;
-REVV	: 'rsub' ;
-LANGSYS : 'languagesystem' ;
-KNULL   : 'NULL' ;
-INCLUDE		: 'include' -> pushMode(Include) ;
-LCBRACE		: '{' ;
-RCBRACE		: '}' ;
-LBRACKET    : '[' ;
-RBRACKET    : ']' ;
-HYPHEN      : '-' ;
-SEMI		: ';' ;
-MARKER      : '\'' ;
-QUOTE       : '"' -> pushMode(String) ;
-fragment GNST	: 'A'..'Z' | 'a' .. 'z' | '_' | '.' ;
-fragment GCCHR	: GNST | '0' .. '9' | '-' ;
-GCLASS		: '@' GCCHR+ ;
-CID         : '\\' ( '0' .. '9' )+ ;
-fragment GNCHR	: GCCHR | '+' | '*' | ':' | '~' | '^' | '|' ; // XXX change from source
-ESCGNAME	: '\\' GNST GNCHR* ;
-NAMELABEL	: GNST+ ;
-EXTNAME		: GNST GNCHR* ;
-fragment TSTART : '!' | '$' | '%' | '&' | '*' | '+' | '-' .. ':' | '?' | 'A' .. 'Z' | '^' .. 'z' | '|' | '~' ; // XXX change from source
-CATCHTAG	: TSTART+ ;
+@members {
+    std::string anon_tag;
+    bool is_anon_close(const std::string &str) {
+        std::cout << "here " << str << std::endl;
+        auto i = str.begin();
+        if ( *i == '\r' )
+            i++;
+        if ( *i++ != '\n' )
+            return false;
+        if ( *i++ != '}' )
+            return false;
+        while ( *i == ' ' || *i == '\t' )
+            i++;
+        if ( str.compare(i-str.begin(), anon_tag.size(), anon_tag)!=0 )
+            return false;
+        i += anon_tag.size();
+        while ( *i == ' ' || *i == '\t' )
+            i++;
+        if ( *i != ';' )
+            return false;
+        return true;
+    }
+}
 
-mode Include;
+ANON        : 'anon' -> pushMode(Anon) ;
+ANONV       : 'anonymous' -> pushMode(Anon) ;
 
-I_WHITESPACE	: [ \t\r\n]+ -> skip ;
-I_RPAREN	: '(' -> pushMode(Ifile) ;
+mode Anon;
 
-mode Ifile;
+A_WHITESPACE    : [ \t\r\n]+ -> skip ;
+A_LABEL    : TSTART+ { anon_tag = getText(); } ;
+A_LBRACE    : '{' -> mode(AnonContent) ;
 
-IFILE		: ~')'+ ;
-I_LPAREN	: ')' -> popMode,popMode ;
+mode AnonContent;
 
-mode String;
-
-STRVAL      : ~'"'* ;
-EQUOTE      : '"' -> popMode ;
+A_CLOSE    : '\r'? '\n}' [ \t]* TSTART+ [ \t]* ';' {is_anon_close(getText())}? -> popMode ;
+A_LINE     : '\r'? '\n' ~[\r\n]* ;

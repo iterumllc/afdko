@@ -4,6 +4,7 @@ options { tokenVocab = FeatLexer; }
 
 featureFile:
     ( topLevelStatement
+    | anonBlock
     | featureBlock
     )* EOF
 ;
@@ -26,6 +27,10 @@ include:
 
 langsysAssign:
     LANGSYS script=tag lang=tag
+;
+
+anonBlock:
+    anontok A_LABEL A_LBRACE A_LINE* A_CLOSE
 ;
 
 featureBlock:
@@ -93,4 +98,8 @@ subtok:
 
 revtok:
     REV | REVV
+;
+
+anontok:
+    ANON | ANONV
 ;

@@ -54,6 +54,7 @@ class FeatVisitor : public FeatParserBaseVisitor {
 
         antlrcpp::Any visitInclude(FeatParser::IncludeContext *ctx);
         antlrcpp::Any visitLangsysAssign(FeatParser::LangsysAssignContext *ctx);
+        antlrcpp::Any visitAnonBlock(FeatParser::AnonBlockContext *ctx);
         antlrcpp::Any visitFeatureBlock(FeatParser::FeatureBlockContext *ctx);
         antlrcpp::Any visitSubstitute(FeatParser::SubstituteContext *ctx);
         antlrcpp::Any visitFeatureUse(FeatParser::FeatureUseContext *ctx);

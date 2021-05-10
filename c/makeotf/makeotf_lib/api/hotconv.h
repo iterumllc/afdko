@@ -284,7 +284,7 @@ struct hotCallbacks_ {
    Feature file data input: */
 
     char *(*featTopLevelFile)(void *ctx);
-    void (*featAddAnonData)(void *ctx, char *data, long count,
+    void (*featAddAnonData)(void *ctx, const char *data, long count,
                             unsigned long tag);
 
     /* [Required] These functions are called to handle feature file support.

@@ -136,8 +136,26 @@ const char *FeatVisitor::currentTokStr() {
 void FeatVisitor::newFileMsg(char **msg) {
     assert( msg != nullptr );
     if ( need_file_msg ) {
-        *msg = (char *) MEM_NEW(fc->g, pathname.size()+30);
-        sprintf(*msg, "In feature file '%s':", pathname.c_str());
+        std::string m = (parent == nullptr ? "in top-level feature file '"
+                                           : "in feature file '")
+                        + pathname + "' ";
+        auto a = parent;
+        bool did_a = false;
+        while ( a != nullptr && a->need_file_msg ) {
+            if ( !did_a )
+                m += "(";
+            else
+                m += ", ";
+            did_a = true;
+            m += "included from " + a->pathname;
+            a->need_file_msg = false;
+            a = a->parent;
+        }
+        if ( did_a )
+            m += ")";
+        m += ":";
+        *msg = (char *) MEM_NEW(fc->g, m.size()+1);
+        memcpy(*msg, m.c_str(), m.size()+1);
         need_file_msg = false;
     } else
         *msg = nullptr;
@@ -183,6 +201,9 @@ Tag FeatVisitor::checkTag(FeatParser::TagContext *start,
 antlrcpp::Any FeatVisitor::visitInclude(FeatParser::IncludeContext *ctx) {
     assert( ctx->IFILE() != nullptr );
     FeatVisitor *inc;
+
+    bool old_nfm = need_file_msg;
+    need_file_msg = true;
     if ( includes.size() == current_include ) {
         inc = new FeatVisitor(fc, TOK(ctx->IFILE())->getText().c_str(), this, ctx,
                               include_ep);
@@ -198,6 +219,11 @@ antlrcpp::Any FeatVisitor::visitInclude(FeatParser::IncludeContext *ctx) {
         inc->Translate();
         fc->current_visitor = this;
     }
+
+    if ( need_file_msg )
+        need_file_msg = old_nfm;
+    else 
+        need_file_msg = false;
 
     current_include++;
     return nullptr;

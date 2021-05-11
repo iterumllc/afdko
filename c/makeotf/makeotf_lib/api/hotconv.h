@@ -175,6 +175,7 @@ hotCtx hotNew(hotCallbacks *cb);
 
 /* Message types (for use with message callback) */
 enum {
+    hotHEADING,
     hotNOTE,
     hotWARNING,
     hotERROR,

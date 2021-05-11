@@ -382,6 +382,7 @@ char *hotReadFont(hotCtx g, int flags, int *psinfo, hotReadFontOverrides *fontOv
          fi->FontName.length);
     g->font.FontName.array[fi->FontName.length] = '\0';
     g->font.FontName.cnt = fi->FontName.length + 1;
+    hotMsg(g, hotHEADING, "processing font <%s>", g->font.FontName.array);
 
     /* Copy basic font information */
     g->font.Notice = fi->Notice;
@@ -1440,7 +1441,7 @@ void hotQuitOnError(hotCtx g) {
    hotCMapID should have some max num chars, or else can't predict how long
    message would be. */
 /* Print note, error, warning, or fatal message (from note buffer is fmt is
-   NULL). If note used, handle reuse of g->note. Prepend FontName. */
+   NULL). If note used, handle reuse of g->note. */
 void CDECL hotMsg(hotCtx g, int level, const char *fmt, ...) {
     if (g->cb.message != NULL) {
         int lenName = g->font.FontName.cnt + 2;
@@ -1448,10 +1449,10 @@ void CDECL hotMsg(hotCtx g, int level, const char *fmt, ...) {
         if (fmt == NULL) {
             if (g->font.FontName.cnt != 0) {
                 int lenNote = g->note.cnt;
-                dnaEXTEND(g->note, lenName);
+                /* dnaEXTEND(g->note, lenName);
                 MOVE(&g->note.array[lenName], g->note.array, lenNote);
                 sprintf(g->note.array, "<%s>", g->font.FontName.array);
-                g->note.array[lenName - 1] = ' ';
+                g->note.array[lenName - 1] = ' '; */
             }
             g->cb.message(g->cb.ctx, level, g->note.array);
         } else {
@@ -1462,24 +1463,26 @@ void CDECL hotMsg(hotCtx g, int level, const char *fmt, ...) {
             size_t p_size;
 
             p_size = sizeof(message);
-            if ((g->font.FontName.cnt != 0) && (lenName < MAX_NOTE_LEN)) {
+            /* if ((g->font.FontName.cnt != 0) && (lenName < MAX_NOTE_LEN)) {
                 sprintf(message, "<%s> ", g->font.FontName.array);
                 p = &message[lenName];
                 p_size -= lenName;
-            } else {
+            } else { */
                 p = message;
-            }
-            const char *premsg, *prefix;
-            featMsgPrefix(g, &premsg, &prefix);
-            // Usually information that the file has changed
-            if ( premsg != NULL )
-                g->cb.message(g->cb.ctx, hotNOTE, premsg);
+            // }
+            if ( level != hotHEADING ) { // Don't print headings for headings
+                const char *premsg, *prefix;
+                featMsgPrefix(g, &premsg, &prefix);
+                // Usually information that the file has changed
+                if ( premsg != NULL )
+                    g->cb.message(g->cb.ctx, hotHEADING, premsg);
 
-            if ( prefix != NULL ) {
-                // Usually feature file line and character numbers
-                int l = snprintf(p, p_size, "%s", prefix);
-                p += l;
-                p_size -= l;
+                if ( prefix != NULL ) {
+                    // Usually feature file line and character numbers
+                    int l = snprintf(p, p_size, "%s", prefix);
+                    p += l;
+                    p_size -= l;
+                }
             }
 
             /* xxx If note is used, crop it to MAX_NOTE_LEN. */

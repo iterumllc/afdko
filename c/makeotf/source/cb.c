@@ -170,20 +170,24 @@ void message(void *ctx, int type, char *text) {
 
     /* Print type */
     switch (type) {
+        case hotHEADING:
+            fprintf(stderr, "%s ", h->progname);
+            break;
+
         case hotNOTE:
-            fprintf(stderr, "%s [NOTE] ", h->progname);
+            fprintf(stderr, "   NOTE: ");
             break;
 
         case hotWARNING:
-            fprintf(stderr, "%s [WARNING] ", h->progname);
+            fprintf(stderr, "WARNING: ");
             break;
 
         case hotERROR:
-            fprintf(stderr, "%s [ERROR] ", h->progname);
+            fprintf(stderr, "  ERROR: ");
             break;
 
         case hotFATAL:
-            fprintf(stderr, "%s [FATAL] ", h->progname);
+            fprintf(stderr, "  FATAL: ");
             break;
     }
     fprintf(stderr, "%s\n", text);
@@ -431,146 +435,6 @@ static char *featTopLevelFile(void *ctx) {
 }
 
 #if 0
-/* Returns mem-allocated path */
-static char *findFeatInclFile(cbCtx h, char *filename) {
-    char path[FILENAME_MAX + 1];
-    char *fullpath;
-
-    path[0] = '\0';
-    if (!filename) {
-        return NULL;
-    }
-    /* Check if relative path */
-    if ((filename[0] != '/') && (filename[0] != '\\') && (filename[1] != ':')) {
-        /* h->feat.includeDir[0] contains the parent directory of the main feature file.             */
-        /* h->feat.includeDir[1] contains the parent directory of the including parent feature file. */
-        if ((h->feat.includeDir[0] != 0) &&
-            (h->feat.includeDir[0][0] != '\0')) {
-            /* Relative to UFO parent dir, if that is what it is */
-            sprintf(path, "%s%s%s", h->feat.includeDir[0], sep(), "fontinfo.plist");
-            if (fileExists(path)) {
-                sprintf(path, "%s%s..%s%s", h->feat.includeDir[0], sep(), sep(), filename);
-                if (fileExists(path)) {
-                    goto found;
-                }
-            }
-            /* Relative to the main feature file */
-            sprintf(path, "%s%s%s", h->feat.includeDir[0], sep(), filename);
-            if (fileExists(path)) {
-                goto found;
-            }
-        }
-        /* Relative to parent include file */
-        if ((h->feat.includeDir[1] != 0) &&
-            (h->feat.includeDir[1][0] != '\0')) {
-            sprintf(path, "%s%s%s", h->feat.includeDir[1], sep(), filename);
-            if (fileExists(path)) {
-                goto found;
-            }
-        }
-        return NULL; /* Can't find include file (error) */
-    } else {
-        if (fileExists(filename)) {
-            strcpy((char *)path, filename);
-        } else {
-            return NULL; /* Can't find include file (error) */
-        }
-    }
-found : { /* set the current include directory */
-    char *p;
-
-    p = findDirName(path);
-    if (p == NULL) {
-        /* if there are no directory separators, it is in the main feature file parent dir */
-        if (h->feat.includeDir[1] != 0)
-            cbMemFree(h, h->feat.includeDir[1]);
-    } else {
-        char featDir[FILENAME_MAX];
-        strncpy(featDir, path, p - path);
-        featDir[p - path] = '\0';
-        if (h->feat.includeDir[1] != 0)
-            cbMemFree(h, h->feat.includeDir[1]);
-        copyStr(h, &h->feat.includeDir[1], featDir);
-    }
-}
-    copyStr(h, &fullpath, (path[0] == '\0') ? filename : path);
-    return fullpath;
-}
-
-/* [hot callback] Open feature file. (name == NULL) indicates main feature
-   file. The full file name is returned. */
-static char *featOpen(void *ctx, char *name, long offset) {
-    cbCtx h = ctx;
-    char *fullpath;
-
-    if (name == NULL) {
-        /* Main feature file */
-        if (h->feat.mainFile != NULL) {
-            if (!fileExists(h->feat.mainFile)) {
-                cbFatal(h, "Specified feature file not found: %s \n", h->feat.mainFile);
-                return NULL; /* No feature file for this font */
-            }
-            copyStr(h, &fullpath, h->feat.mainFile);
-            if (h->feat.includeDir[1] != 0) {
-                cbMemFree(ctx, h->feat.includeDir[1]);
-                h->feat.includeDir[1] = 0;
-            }
-        } else {
-            return NULL; /* No feature file for this font */
-        }
-    } else if (offset == 0) {
-        /* First time called, we get the path used in the feature file */
-        fullpath = findFeatInclFile(h, name);
-        if (fullpath == NULL) {
-            return NULL; /* Include file not found (error) */
-        }
-    } else {
-        char *p;
-        /* RE-opening file: name is full path. */
-        copyStr(h, &fullpath, name);
-        /* Determine dir that feature file's in */
-        p = findDirName(fullpath);
-        if (p == NULL) {
-            cbMemFree(ctx, h->feat.includeDir[1]);
-            h->feat.includeDir[1] = 0;
-        } else {
-            char featDir[FILENAME_MAX];
-            strncpy(featDir, fullpath, p - fullpath);
-            featDir[p - fullpath] = '\0';
-            if (h->feat.includeDir[1] != 0) {
-                cbMemFree(ctx, h->feat.includeDir[1]);
-                h->feat.includeDir[1] = 0;
-            }
-            copyStr(h, &h->feat.includeDir[1], featDir);
-        }
-    }
-
-    if (h->feat.file.name != NULL) {
-        cbFatal(h, "previous feature file not closed\n");
-    }
-
-    fileOpen(&h->feat.file, h, fullpath, "rb");
-    if (offset != 0) {
-        fileSeek(&h->feat.file, offset, SEEK_SET);
-    }
-    return fullpath;
-}
-
-/* [hot callback] Refill data buffer from file */
-static char *featRefill(void *ctx, long *count) {
-    cbCtx h = ctx;
-    *count = fileReadN(&h->feat.file, BUFSIZ, h->feat.buf);
-    return (*count == 0) ? NULL : h->feat.buf;
-}
-
-/* [hot callback] Close feature file */
-static void featClose(void *ctx) {
-    cbCtx h = ctx;
-    fileClose(&h->feat.file);
-    cbMemFree(h, h->feat.file.name); /* Alloc in featOpen() */
-    h->feat.file.name = NULL;
-}
-
 #define TAG_ARG(t) (char)((t) >> 24 & 0xff), (char)((t) >> 16 & 0xff), \
                    (char)((t) >> 8 & 0xff), (char)((t)&0xff)
 

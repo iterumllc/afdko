@@ -7,6 +7,10 @@
 
 #include "common.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define BASE_ TAG('B', 'A', 'S', 'E')
 
 /* Standard functions */
@@ -22,5 +26,8 @@ void BASESetBaselineTags(hotCtx g, int vert, int nTag,
 
 void BASEAddScript(hotCtx g, int vert, Tag script, Tag dfltBaseline,
                    short *coord); /* [nTag] */
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* HOTCONV_BASE_H */

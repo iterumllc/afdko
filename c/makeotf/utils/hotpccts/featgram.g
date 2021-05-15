@@ -18,7 +18,7 @@
 #include <math.h>
 
 #include "common.h"
-#include "feat.h"
+#include "featpriv_c.h"
 #include "OS_2.h"
 #include "hhea.h"
 #include "vmtx.h"
@@ -362,15 +362,13 @@ glyphClass[bool named, bool dontcopy, char *gcname]>[GNode *gnode]
 				char *secondPart = p;
 				char *firstPart = p;
 				/* it might be a range.*/
-				zzBLOCK(zztasp4);
-				zzMake0;
 				secondPart = strchr(p, '-');
 				if (secondPart != NULL) {
 					*secondPart = '\0';
 					secondPart++;
 					gid = featMapGName2GID(g, firstPart, FALSE );
 					endgid  = featMapGName2GID(g, secondPart, FALSE );
-					if (gid != 0 && endgid != 0) {
+					if (gid != GID_NOTDEF && endgid != GID_NOTDEF) { // XXX changed
 						gcAddRange(gid, endgid, firstPart, secondPart);
 					}
 					else {
@@ -382,7 +380,6 @@ glyphClass[bool named, bool dontcopy, char *gcname]>[GNode *gnode]
 					featMapGName2GID(g, firstPart, FALSE);
 					hotMsg(g, hotFATAL, "incomplete glyph range or glyph not in font");
 				}
-				zzEXIT(zztasp4);
 			}
 			else
 			>>
@@ -392,7 +389,7 @@ glyphClass[bool named, bool dontcopy, char *gcname]>[GNode *gnode]
 				<<gcAddGlyph(gid);>>
 			)
 			|
-			b:T_GCLASS				<<gcAddGlyphClass($b.text, named);>>
+			b:T_GCLASS				<<gcAddGlyphClass($b.text, named);>> // XXX check for self-named
 		)+
 		"\]"
 
@@ -1824,7 +1821,7 @@ baseScript[int vert, long nTag]
 	:	<<
 		int num;
 	dnaDCL(short, coord);
-	dnaINIT(g->dnaCtx, coord, 5, 5);
+	dnaINIT(g->DnaCTX, coord, 5, 5);
 		>>
 
 		s:T_TAG <<zzmode(TAG_MODE);>>
@@ -1846,7 +1843,7 @@ axisSpecs
 	:	<<
 		int vert = 0;
 		dnaDCL(Tag, tagList);
-		dnaINIT(g->dnaCtx, tagList, 5, 5);
+		dnaINIT(g->DnaCTX, tagList, 5, 5);
 		>>
 
 		(K_HorizAxis_BaseTagList | K_VertAxis_BaseTagList <<vert = 1;>>)
@@ -2037,8 +2034,8 @@ axisValue
 		Fixed value, min, max;
 		Tag axisTag;
 		h->featNameID = 0;
-		dnaINIT(g->dnaCtx, axisTags, 1, 5);
-		dnaINIT(g->dnaCtx, values, 1, 5);
+		dnaINIT(g->DnaCTX, axisTags, 1, 5);
+		dnaINIT(g->DnaCTX, values, 1, 5);
 		>>
 		K_AxisValue
 		"\{"

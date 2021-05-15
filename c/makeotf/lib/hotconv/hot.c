@@ -6,7 +6,7 @@
  */
 
 #include "sfnt.h"
-#include "map.h"
+#include "hotmap.h"
 #include "feat.h"
 #include "otl.h"
 #include "name.h"
@@ -33,7 +33,7 @@ static void initCharName(void *ctx, long count, CharName *charname) {
     hotCtx g = ctx;
     long i;
     for (i = 0; i < count; i++) {
-        dnaINIT(g->dnaCtx, *charname, 16, 16);
+        dnaINIT(g->DnaCTX, *charname, 16, 16);
         charname++;
     }
     return;
@@ -53,33 +53,30 @@ static void initOverrides(hotCtx g) {
 static ctlMemoryCallbacks hot_dna_memcb;
 
 static void *hot_manage(ctlMemoryCallbacks *cb, void *old, size_t size) {
-    hotCallbacks hcb = ((hotCtx)cb->ctx)->cb;
+    hotCtx h = (hotCtx)cb->ctx;
     void *p = NULL;
     if (size > 0) {
         if (old == NULL) {
-            p = hcb.malloc(hcb.ctx, size);
+            p = hotMemNew(h, size);
             return (p);
         } else {
-            p = hcb.realloc(hcb.ctx, old, size);
+            p = hotMemResize(h, old, size);
             return (p);
         }
     } else {
         if (old == NULL) {
             return NULL;
         } else {
-            hcb.free(hcb.ctx, old);
+            hotMemFree(h, old);
             return NULL;
         }
     }
 }
 
 hotCtx hotNew(hotCallbacks *hotcb) {
-    hotCtx g = hotcb->malloc(hotcb->ctx, sizeof(struct hotCtx_));
     tcCallbacks tccb;
     time_t now;
-
-    g->hadError = 0;
-    g->convertFlags = 0;
+    hotCtx g = malloc(sizeof(struct hotCtx_));
 
     if (g == NULL) {
         if (hotcb->message != NULL) {
@@ -87,6 +84,9 @@ hotCtx hotNew(hotCallbacks *hotcb) {
         }
         hotcb->fatal(hotcb->ctx);
     }
+
+    g->hadError = 0;
+    g->convertFlags = 0;
 
     /* Set version numbers. The hot library version serves to identify the      */
     /* software version that built an OTF font and is saved in the Version name */
@@ -108,7 +108,7 @@ hotCtx hotNew(hotCallbacks *hotcb) {
     hot_dna_memcb.manage = hot_manage;
 
     /* Initialize contexts for safe freeing */
-    g->dnaCtx = NULL;
+    g->DnaCTX = NULL;
     g->ctx.cff = NULL;
     g->ctx.tc = NULL;
     g->ctx.map = NULL;
@@ -131,10 +131,10 @@ hotCtx hotNew(hotCallbacks *hotcb) {
     g->ctx.vmtx = NULL;
     g->ctx.VORG = NULL;
 
-    g->dnaCtx = dnaNew(&hot_dna_memcb, DNA_CHECK_ARGS);
-    dnaINIT(g->dnaCtx, g->data, 250, 500);
-    dnaINIT(g->dnaCtx, g->tmp, 250, 500);
-    dnaINIT(g->dnaCtx, g->note, 1024, 1024);
+    g->DnaCTX = dnaNew(&hot_dna_memcb, DNA_CHECK_ARGS);
+    dnaINIT(g->DnaCTX, g->data, 250, 500);
+    dnaINIT(g->DnaCTX, g->tmp, 250, 500);
+    dnaINIT(g->DnaCTX, g->note, 1024, 1024);
 
     /* Initialize font information */
 #if HOT_DEBUG
@@ -144,12 +144,12 @@ hotCtx hotNew(hotCallbacks *hotcb) {
     g->font.fsSelectionMask_on = -1;
     g->font.fsSelectionMask_off = -1;
     g->font.os2Version = 0;
-    dnaINIT(g->dnaCtx, g->font.FontName, 64, 32);
-    dnaINIT(g->dnaCtx, g->font.kern.pairs, 1500, 1000);
-    dnaINIT(g->dnaCtx, g->font.kern.values, 1500, 8500);
-    dnaINIT(g->dnaCtx, g->font.unenc, 30, 70);
+    dnaINIT(g->DnaCTX, g->font.FontName, 64, 32);
+    dnaINIT(g->DnaCTX, g->font.kern.pairs, 1500, 1000);
+    dnaINIT(g->DnaCTX, g->font.kern.values, 1500, 8500);
+    dnaINIT(g->DnaCTX, g->font.unenc, 30, 70);
     g->font.unenc.func = initCharName;
-    dnaINIT(g->dnaCtx, g->font.glyphs, 315, 350);
+    dnaINIT(g->DnaCTX, g->font.glyphs, 315, 350);
 
     initOverrides(g);
 
@@ -157,9 +157,6 @@ hotCtx hotNew(hotCallbacks *hotcb) {
     tccb.ctx = hotcb->ctx;
     tccb.fatal = hotcb->fatal;
     tccb.message = hotcb->message; /* Suppress messages from library */
-    tccb.malloc = hotcb->malloc;
-    tccb.realloc = hotcb->realloc;
-    tccb.free = hotcb->free;
     tccb.psId = hotcb->psId;
     tccb.psRefill = hotcb->psRefill;
     tccb.psSize = NULL;
@@ -188,7 +185,7 @@ hotCtx hotNew(hotCallbacks *hotcb) {
 void setVendId_str(hotCtx g, char *vend) {
     char *id;
 
-    id = (char *)g->cb.malloc(g->cb.ctx, strlen(vend) + 1);
+    id = (char *)hotMemNew(g, strlen(vend) + 1);
     strcpy(id, vend);
     g->font.vendId = id;
 }
@@ -283,13 +280,13 @@ static void cbMessage(void *ctx, int type, char *text) {
 /* [cffread callback] Allocate memory */
 static void *cbMalloc(void *ctx, size_t size) {
     hotCtx g = ctx;
-    return g->cb.malloc(g->cb.ctx, size);
+    return hotMemNew(g, size);
 }
 
 /* [cffread callback] Free memory */
 static void cbFree(void *ctx, void *ptr) {
     hotCtx g = ctx;
-    g->cb.free(g->cb.ctx, ptr);
+    hotMemFree(g, ptr);
 }
 
 /* [cffread callback] Seek to offset and return data. */
@@ -385,6 +382,7 @@ char *hotReadFont(hotCtx g, int flags, int *psinfo, hotReadFontOverrides *fontOv
          fi->FontName.length);
     g->font.FontName.array[fi->FontName.length] = '\0';
     g->font.FontName.cnt = fi->FontName.length + 1;
+    hotMsg(g, hotHEADING, "processing font <%s>", g->font.FontName.array);
 
     /* Copy basic font information */
     g->font.Notice = fi->Notice;
@@ -1026,7 +1024,7 @@ void hotFree(hotCtx g) {
         }
         dnaFREE(g->font.unenc);
     }
-
+    dnaFree(g->DnaCTX);
     MEM_FREE(g, g);
 }
 
@@ -1110,7 +1108,7 @@ static int prepWinName(hotCtx g, signed char *src) {
         {   E_,     A_|H_,  A_|H_,  A_|H_,  E_,     E_ },   /* [4] */
     };
 
-    char *dst = dnaGROW(g->tmp, (long)strlen(src));
+    char *dst = dnaGROW(g->tmp, (long)strlen((char *)src));
     int state = 0;
     unsigned value = 0;
 
@@ -1239,7 +1237,7 @@ static int prepMacName(hotCtx g, signed char *src) {
         {   E_,     A_|H_,  A_|H_,  A_|H_,  E_,     E_ },   /* [2] */
     };
 
-    char *dst = dnaGROW(g->tmp, (long)strlen(src));
+    char *dst = dnaGROW(g->tmp, (long)strlen((char *)src));
     int state = 0;
     unsigned value = 0;
 
@@ -1414,6 +1412,24 @@ void hotAddAnonTable(hotCtx g, unsigned long tag, hotAnonRefill refill) {
 
 /* ---------------------------- Utility Functions --------------------------- */
 
+void *hotMemNew(hotCtx g, size_t size) {
+    void *ptr = malloc(size);
+    if ( ptr == NULL )
+        hotMsg(g, hotFATAL, "out of memory");
+    return ptr;
+}
+
+void *hotMemResize(hotCtx g, void *old, size_t size) {
+    void *ptr = realloc(old, size);
+    if ( ptr == NULL )
+        hotMsg(g, hotFATAL, "out of memory");
+    return ptr;
+}
+
+void hotMemFree(hotCtx g, void *ptr) {
+    free(ptr);
+}
+
 /* Call fatal if hadError is set (this is set by a hotMsg() hotERROR call) */
 void hotQuitOnError(hotCtx g) {
     if (g->hadError) {
@@ -1425,26 +1441,18 @@ void hotQuitOnError(hotCtx g) {
    hotCMapID should have some max num chars, or else can't predict how long
    message would be. */
 /* Print note, error, warning, or fatal message (from note buffer is fmt is
-   NULL). If note used, handle reuse of g->note. Prepend FontName. */
-void CDECL hotMsg(hotCtx g, int level, char *fmt, ...) {
-    void (*fatal)(void *) = NULL; /* Suppress optimizer warning */
-    void *ctx = NULL;             /* Suppress optimizer warning */
-
-    if (level == hotFATAL) {
-        fatal = g->cb.fatal;
-        ctx = g->cb.ctx;
-    }
-
+   NULL). If note used, handle reuse of g->note. */
+void CDECL hotMsg(hotCtx g, int level, const char *fmt, ...) {
     if (g->cb.message != NULL) {
         int lenName = g->font.FontName.cnt + 2;
 
         if (fmt == NULL) {
             if (g->font.FontName.cnt != 0) {
                 int lenNote = g->note.cnt;
-                dnaEXTEND(g->note, lenName);
+                /* dnaEXTEND(g->note, lenName);
                 MOVE(&g->note.array[lenName], g->note.array, lenNote);
                 sprintf(g->note.array, "<%s>", g->font.FontName.array);
-                g->note.array[lenName - 1] = ' ';
+                g->note.array[lenName - 1] = ' '; */
             }
             g->cb.message(g->cb.ctx, level, g->note.array);
         } else {
@@ -1455,12 +1463,26 @@ void CDECL hotMsg(hotCtx g, int level, char *fmt, ...) {
             size_t p_size;
 
             p_size = sizeof(message);
-            if ((g->font.FontName.cnt != 0) && (lenName < MAX_NOTE_LEN)) {
+            /* if ((g->font.FontName.cnt != 0) && (lenName < MAX_NOTE_LEN)) {
                 sprintf(message, "<%s> ", g->font.FontName.array);
                 p = &message[lenName];
                 p_size -= lenName;
-            } else {
+            } else { */
                 p = message;
+            // }
+            if ( level != hotHEADING ) { // Don't print headings for headings
+                const char *premsg, *prefix;
+                featMsgPrefix(g, &premsg, &prefix);
+                // Usually information that the file has changed
+                if ( premsg != NULL )
+                    g->cb.message(g->cb.ctx, hotHEADING, premsg);
+
+                if ( prefix != NULL ) {
+                    // Usually feature file line and character numbers
+                    int l = snprintf(p, p_size, "%s", prefix);
+                    p += l;
+                    p_size -= l;
+                }
             }
 
             /* xxx If note is used, crop it to MAX_NOTE_LEN. */
@@ -1478,12 +1500,10 @@ void CDECL hotMsg(hotCtx g, int level, char *fmt, ...) {
         }
     }
 
-    if (g->note.cnt != 0) {
-        g->note.cnt = 0;
-    }
+    g->note.cnt = 0;
 
     if (level == hotFATAL) {
-        fatal(ctx); /* hotFree called from within this */
+        g->cb.fatal(g->cb.ctx);
     } else if (level == hotERROR && !g->hadError) {
         g->hadError = 1;
     }
@@ -1553,6 +1573,7 @@ char *hotGetString(hotCtx g, SID sid, unsigned *length) {
 }
 
 /* Encode integer and return length */
+#if 0
 static int encInteger(short i, unsigned char *cstr) {
     if (-107 <= i && i <= 107) {
         /* Single byte number */
@@ -1578,6 +1599,7 @@ static int encInteger(short i, unsigned char *cstr) {
         return 3;
     }
 }
+#endif
 
 /* --------------------- Temporary Debugging Functions --------------------- */
 

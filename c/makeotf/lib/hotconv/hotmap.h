@@ -14,6 +14,10 @@
 
 #include "common.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /* Standard functions */
 void mapNew(hotCtx g);
 int mapFill(hotCtx g);
@@ -35,8 +39,8 @@ void mapPrintAFM(hotCtx g);
 hotGlyphInfo *mapUV2Glyph(hotCtx g, UV uv);
 GID mapUV2GID(hotCtx g, UV uv);
 
-hotGlyphInfo *mapName2Glyph(hotCtx g, char *gname, char **useAliasDB);
-GID mapName2GID(hotCtx g, char *gname, char **useAliasDB);
+hotGlyphInfo *mapName2Glyph(hotCtx g, const char *gname, char **useAliasDB);
+GID mapName2GID(hotCtx g, const char *gname, char **useAliasDB);
 
 void mapGID2Name(hotCtx g, GID gid, char *msg);
 
@@ -51,5 +55,9 @@ GID mapWinANSI2GID(hotCtx g, int code);
 
 hotGlyphInfo *mapPlatEnc2Glyph(hotCtx g, int code);
 GID mapPlatEnc2GID(hotCtx g, int code);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* MAP_H */

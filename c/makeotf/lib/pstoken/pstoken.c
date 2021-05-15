@@ -202,7 +202,12 @@ void psSetPlain(psCtx h) {
 /* Begin new file parse */
 psCtx psNew(psCallbacks *cb) {
     /* Allocate context */
-    psCtx h = cb->malloc(cb->ctx, sizeof(struct psCtx_));
+    psCtx h = malloc(sizeof(struct psCtx_));
+    if ( h == NULL ) {
+        if (cb->message != NULL)
+            cb->message(cb->ctx, psFATAL, "out of memory");
+        cb->fatal(cb->ctx);
+    }
 
     h->cb = *cb;
     h->left = 0;
@@ -219,7 +224,7 @@ psCtx psNew(psCallbacks *cb) {
 
 /* End file parse */
 void psFree(psCtx h) {
-    h->cb.free(h->cb.ctx, h); /* Free context */
+    free(h); /* Free context */
 }
 
 /* Skip over string token */

@@ -10,7 +10,7 @@
 
 #include "hotconv.h"
 #include "cmap.h"
-#include "map.h"
+#include "hotmap.h"
 #include "feat.h"
 #include "dynarr.h"
 
@@ -221,10 +221,10 @@ void cmapNew(hotCtx g) {
 
     h->tbl.nEncodings = 0;
     h->lastUVS = 0;
-    dnaINIT(g->dnaCtx, h->tbl.encoding, 5, 2);
-    dnaINIT(g->dnaCtx, h->uvsList, 40, 40);
-    dnaINIT(g->dnaCtx, h->mapping, 9000, 2000);
-    dnaINIT(g->dnaCtx, h->codespace, 5, 10);
+    dnaINIT(g->DnaCTX, h->tbl.encoding, 5, 2);
+    dnaINIT(g->DnaCTX, h->uvsList, 40, 40);
+    dnaINIT(g->DnaCTX, h->mapping, 9000, 2000);
+    dnaINIT(g->DnaCTX, h->codespace, 5, 10);
 
     /* Link contexts */
     h->g = g;
@@ -288,7 +288,7 @@ static void CDECL cmapMsg(hotCtx g, int msgType, char *fmt, ...) {
     cmapCtx h = g->ctx.cmap;
     va_list ap;
     char msgVar[1024];
-    char msg[1024];
+    char msg[1536];
 
     va_start(ap, fmt);
     VSPRINTF_S(msgVar, sizeof(msgVar), fmt, ap);
@@ -371,8 +371,8 @@ void cmapAddUVSEntry(hotCtx g, unsigned int uvsFlags, unsigned long uv, unsigned
 
     if (h->lastUVS != uvs) {
         uvsRec = dnaNEXT(h->uvsList);
-        dnaINIT(g->dnaCtx, uvsRec->dfltUVS, 1000, 1000);
-        dnaINIT(g->dnaCtx, uvsRec->extUVS, 1000, 1000);
+        dnaINIT(g->DnaCTX, uvsRec->dfltUVS, 1000, 1000);
+        dnaINIT(g->DnaCTX, uvsRec->extUVS, 1000, 1000);
         h->lastUVS = uvsRec->uvs = uvs;
     } else {
         uvsRec = dnaINDEX(h->uvsList, h->uvsList.cnt - 1);
@@ -650,8 +650,8 @@ static Format2 *makeFormat2(cmapCtx h) {
     Mapping *mapping = h->mapping.array;
     Format2 *fmt = MEM_NEW(h->g, sizeof(Format2));
 
-    dnaINIT(h->g->dnaCtx, fmt->segment, 128, 32);
-    dnaINIT(h->g->dnaCtx, fmt->glyphId, 2000, 500);
+    dnaINIT(h->g->DnaCTX, fmt->segment, 128, 32);
+    dnaINIT(h->g->DnaCTX, fmt->glyphId, 2000, 500);
     fmt->glyphId.func = glyphIdInit;
 
     partitionSegments(h);
@@ -823,6 +823,7 @@ static void makeSegment4(hotCtx g, Format4 *fmt, int nSegments, int segment,
     }
 }
 
+#if 0
 /* Make format 4 cmap */
 static void doRemovePUAs(hotCtx g, cmapCtx h, int isMixedByte) {
     long i;
@@ -844,6 +845,7 @@ static void doRemovePUAs(hotCtx g, cmapCtx h, int isMixedByte) {
         h->mapping.cnt -= nPUAs;
     }
 }
+#endif
 
 static Format4 *makeFormat4(cmapCtx h, unsigned long *length) {
     hotCtx g = h->g;
@@ -856,7 +858,7 @@ static Format4 *makeFormat4(cmapCtx h, unsigned long *length) {
 
     Mapping *mapping = h->mapping.array;
     Format4 *fmt = MEM_NEW(h->g, sizeof(Format4));
-    dnaINIT(h->g->dnaCtx, fmt->glyphId, 256, 64);
+    dnaINIT(h->g->DnaCTX, fmt->glyphId, 256, 64);
 
     if (g->convertFlags & HOT_STUB_CMAP4)
         truncateCmap = 1;
@@ -957,7 +959,7 @@ static Format12 *makeFormat12(cmapCtx h, unsigned long *length) {
     long iSegBeg = 0; /* Index of beginning of segment */
     Format12 *fmt = MEM_NEW(h->g, sizeof(Format12));
 
-    dnaINIT(h->g->dnaCtx, fmt->segment, 40, 80); /* xxx dynamic numbers? */
+    dnaINIT(h->g->DnaCTX, fmt->segment, 40, 80); /* xxx dynamic numbers? */
 
     for (i = 1; i <= h->mapping.cnt; i++) {
         if (i == h->mapping.cnt || mapping[i].code != mapping[i - 1].code + 1 || mapping[i].glyphId != mapping[i - 1].glyphId + 1) {
@@ -1166,7 +1168,6 @@ int cmapEndEncoding(hotCtx g) {
         /* o InDesign 1.0 CoolType restrictions: supports only format 0 or 6   */
         /*   Mac cmap.                                                         */
 
-        int format4Selected = 0;
         unsigned long format4Size = ULONG_MAX; /* Denotes fmt 4 not allowed */
         Format4 *format4 =
             (h->platformId == cmap_MAC || h->platformId == cmap_CUSTOM)
@@ -1184,7 +1185,6 @@ int cmapEndEncoding(hotCtx g) {
 #if HOT_DEBUG
             cmapMsg(g, hotNOTE, "format 4 cmap created");
 #endif
-            format4Selected = 1;
             encoding->format = format4;
         } else {
             encoding->format = makeFormat6(h, &format6Size);

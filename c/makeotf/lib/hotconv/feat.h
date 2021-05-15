@@ -7,6 +7,10 @@
 
 #include "common.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #if HOT_DEBUG
 #define DF_LEVEL ((g->font.debug & HOT_DB_FEAT_2) ? 2 : ((g->font.debug & HOT_DB_FEAT_1) ? 1 : 0))
 #define DF(L, p)             \
@@ -22,7 +26,7 @@
 /* Preferred to 0 for proper otl sorting. This can't conflict with a valid
    tag since tag characters must be in ASCII 32-126. */
 #define TAG_UNDEF 0xFFFFFFFF
-#define TAG_STAND_ALONE 0x01010101 /* Feature, script. language tags used for stand-alone lookups */
+#define TAG_STAND_ALONE ((Tag) { 0x01010101 }) /* Feature, script. language tags used for stand-alone lookups */
 
 #define MAX_FEAT_PARAM_NUM 256
 
@@ -58,16 +62,16 @@
 
 typedef unsigned short Label;
 
-/* --- Linked list support --- */
+typedef struct { /* Subtable record */
+    unsigned short Format;
+    unsigned short FeatUILabelNameID;
+    unsigned short FeatUITooltipTextNameID;
+    unsigned short SampleTextNameID;
+    unsigned short NumNamedParameters;
+    unsigned short FirstParamUILabelNameID;
+    dnaDCL(unsigned long, charValues);
+} CVParameterFormat; /* Special case format for subtable data. */
 
-typedef struct AnchorRec_ {
-    unsigned int format;
-    short x;
-    short y;
-    unsigned short pointIndex;
-} AnchorRec;
-
-#define kMaxAnchors 16
 typedef struct GNode_ GNode;
 
 typedef struct {
@@ -118,7 +122,7 @@ struct GNode_ {
 /* --- Standard functions --- */
 
 void featNew(hotCtx g);
-int featFill(hotCtx g);
+void featFill(hotCtx g);
 void featReuse(hotCtx g);
 void featFree(hotCtx g);
 
@@ -138,32 +142,19 @@ int featGetGlyphClassCount(hotCtx g, GNode *gc);
 
 #if HOT_FEAT_SUPPORT
 
-unsigned featGetPatternLen(hotCtx g, GNode *pat);
+unsigned int featGetPatternLen(hotCtx g, GNode *pat);
 void featGlyphClassSort(hotCtx g, GNode **list, int unique, int reportDups);
 GNode ***featMakeCrossProduct(hotCtx g, GNode *pat, unsigned *n);
 
 Label featGetNextAnonLabel(hotCtx g);
-Label featGetLookupLabel(hotCtx g, GNode *sub, unsigned lkpFlags);
 
-/* --- PCCTS scanner functions --- */
-int featOpenIncludeFile(hotCtx g, char *filename);
-int featCloseIncludeFile(hotCtx g, int closeBase);
-char *featTrimParensSpaces(char *text);
-void featWrapUpFeatFile(void);
-void featSetIncludeReturnMode(int mode);
-int featGetIncludeReturnMode(void);
-void featSetTagReturnMode(int mode);
-int featGetTagReturnMode(void);
-int featAddAnonDataChar(char ch, int isEOL);
-void featAddNameStringChar(char ch);
-void featUnexpectedEOF(void);
 int featValidateGPOSChain(hotCtx g, GNode *targ, int lookupType);
 
-#define kDEFAULT_BASECLASS_NAME "FDK_BASE_CLASS"
-#define kDEFAULT_LIGATURECLASS_NAME "FDK_LIGATURE_CLASS"
-#define kDEFAULT_MARKCLASS_NAME "FDK_DEFAULT_MARK_CLASS"
-#define kDEFAULT_COMPONENTCLASS_NAME "FDK_DEFAULT_COMPONENT_CLASS"
 
 #endif /* HOT_FEAT_SUPPORT */
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* HOTCONV_FEAT_H */

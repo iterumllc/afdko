@@ -7,6 +7,10 @@
 
 #include "common.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define OS_2_ TAG('O', 'S', '/', '2')
 
 /* Standard functions */
@@ -36,5 +40,9 @@ void OS_2SetWidthClass(hotCtx g, uint16_t widthClass);
 void OS_2LowerOpticalPointSize(hotCtx g, uint16_t opSize);
 void OS_2UpperOpticalPointSize(hotCtx g, uint16_t opSize);
 void OS_2FamilyClass(hotCtx g, uint16_t familyClass);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* HOTCONV_OS_2_H */

@@ -1,25 +1,32 @@
+set(GENERATED_SOURCES 
+    FeatCtx.cpp
+    FeatCtx.h
+    FeatLexer.cpp
+    FeatLexer.h
+    FeatParserBaseVisitor.cpp
+    FeatParserBaseVisitor.h
+    FeatParser.cpp
+    FeatParser.h
+    FeatParserVisitor.cpp
+    FeatParserVisitor.h
+)
+
 add_library(hotconv STATIC
     anon.c
     anon.h
-    antlr.h
     BASE.c
     BASE.h
     CFF_.c
     CFF_.h
     cmap.c
     cmap.h
-    codepage.h
     common.h
-    config.h
-    dlgauto.h
-    dlgdef.h
-    err.h
-    featerr.c
-    featgram.c
     feat.h
-    featmode.h
-    featscan.c
-    feattoks.h
+    FeatCtx.cpp
+    FeatCtx.h
+    ${GENERATED_SOURCES}
+    FeatVisitor.cpp
+    FeatVisitor.h
     GDEF.c
     GDEF.h
     GPOS.c
@@ -33,7 +40,7 @@ add_library(hotconv STATIC
     hmtx.c
     hmtx.h
     hot.c
-    map.h
+    hotmap.h
     map.c
     maxp.c
     maxp.h
@@ -61,6 +68,11 @@ add_library(hotconv STATIC
 )
 
 set_property(TARGET hotconv PROPERTY C_STANDARD 99)
+set_property(TARGET hotconv PROPERTY CXX_STANDARD 11)
 target_compile_definitions(hotconv PRIVATE HOT_FEAT_SUPPORT=1)
-target_include_directories(hotconv PRIVATE AFTER ../../utils/hotpccts/pccts/h)
+target_include_directories(hotconv PRIVATE AFTER $<$<COMPILE_LANGUAGE:CXX>:/usr/include/antlr4-runtime>)
 
+if ( CMAKE_COMPILER_IS_GNUCC )
+    target_compile_options(hotconv PRIVATE -Wall)
+    set_source_files_properties(${GENERATED_SOURCES} PROPERTIES COMPILE_FLAGS -Wno-attributes)
+endif()

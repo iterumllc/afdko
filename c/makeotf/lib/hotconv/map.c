@@ -7,7 +7,7 @@
  * Assigns UVs, feeds cmap module
  */
 
-#include "map.h"
+#include "hotmap.h"
 #include "OS_2.h"
 #include "cmap.h"
 #include "GPOS.h"
@@ -306,28 +306,26 @@ static void mapInit(hotCtx g);
 void mapNew(hotCtx g) {
     mapCtx h = MEM_NEW(g, sizeof(struct mapCtx_));
 
-    dnaINIT(g->dnaCtx, h->ps.buf, 35000, 50000); /* ? xxx */
+    dnaINIT(g->DnaCTX, h->ps.buf, 35000, 50000); /* ? xxx */
     h->ps.cb.ctx = g->cb.ctx;
     h->ps.cb.fatal = g->cb.fatal;
-    h->ps.cb.malloc = g->cb.malloc;
-    h->ps.cb.free = g->cb.free;
     h->ps.cb.buf = &h->ps.buf;
     h->ps.cb.message = g->cb.message;
 
-    dnaINIT(g->dnaCtx, h->cid.hor.range, 6970, 2000); /* Optimized for UniJIS-UCS2-[HV] */
-    dnaINIT(g->dnaCtx, h->cid.ver.map, 180, 180);
-    dnaINIT(g->dnaCtx, h->cid.mac.codespace, 5, 10);
-    dnaINIT(g->dnaCtx, h->cid.mac.range, 225, 225); /* Optimized for 83pv-RKSJ-H */
+    dnaINIT(g->DnaCTX, h->cid.hor.range, 6970, 2000); /* Optimized for UniJIS-UCS2-[HV] */
+    dnaINIT(g->DnaCTX, h->cid.ver.map, 180, 180);
+    dnaINIT(g->DnaCTX, h->cid.mac.codespace, 5, 10);
+    dnaINIT(g->DnaCTX, h->cid.mac.range, 225, 225); /* Optimized for 83pv-RKSJ-H */
 
     h->cid.hor.name = SINX_UNDEF;
     h->cid.ver.name = SINX_UNDEF;
     h->cid.mac.name = SINX_UNDEF;
 
-    dnaINIT(g->dnaCtx, h->uvs.entries, 15000, 500); /* Optimized for 83pv-RKSJ-H */
+    dnaINIT(g->DnaCTX, h->uvs.entries, 15000, 500); /* Optimized for 83pv-RKSJ-H */
 
-    dnaINIT(g->dnaCtx, h->sort.gname, 400, 7000);
-    dnaINIT(g->dnaCtx, h->sort.uv, 400, 6000);
-    dnaINIT(g->dnaCtx, h->sort.glyphAddlUV, 10, 60);
+    dnaINIT(g->DnaCTX, h->sort.gname, 400, 7000);
+    dnaINIT(g->DnaCTX, h->sort.uv, 400, 6000);
+    dnaINIT(g->DnaCTX, h->sort.glyphAddlUV, 10, 60);
     h->sort.firstAddlUV = UV_UNDEF;
     h->sort.lastAddlUV = 0;
     h->sort.nAddlUV = 0;
@@ -336,7 +334,7 @@ void mapNew(hotCtx g) {
     h->minBmpUV = LONG_MAX;
     h->maxBmpUV = LONG_MIN;
 
-    dnaINIT(g->dnaCtx, h->str, 2400, 3600);
+    dnaINIT(g->DnaCTX, h->str, 2400, 3600);
 
     /* Link contexts */
     h->g = g;
@@ -387,6 +385,7 @@ GID mapCID2GID(hotCtx g, CID cid) {
 
 /* Sort GNAME_UNREC glyphs before others, and among the GNAME_UNREC glyphs,
    sort GNAME_UNREC_HAS_SUPP after the others. */
+#if 0
 static int CDECL cmpUnrecGlyphName(const void *first, const void *second) {
     hotGlyphInfo *a = *(hotGlyphInfo **)first;
     hotGlyphInfo *b = *(hotGlyphInfo **)second;
@@ -410,6 +409,7 @@ static int CDECL cmpUnrecGlyphName(const void *first, const void *second) {
         return 0;
     }
 }
+#endif
 
 static int CDECL cmpGlyphName(const void *a, const void *b) {
     return strcmp((*(hotGlyphInfo **)a)->gname.str,
@@ -424,9 +424,9 @@ static int CDECL matchGlyphName(const void *key, const void *value) {
    is present, it considers gname as an alias and uses the "real" name from
    the glyph alias db and sets *useAliasDB to that name. If useAliasDB is
    non-NULL and glyph alias db is not present, sets *useAliasDB to NULL. */
-hotGlyphInfo *mapName2Glyph(hotCtx g, char *gname, char **useAliasDB) {
+hotGlyphInfo *mapName2Glyph(hotCtx g, const char *gname, char **useAliasDB) {
     mapCtx h = g->ctx.map;
-    char *realName = gname;
+    const char *realName = gname;
     hotGlyphInfo **found;
 
     if (IS_CID(g) && useAliasDB == NULL) {
@@ -435,7 +435,7 @@ hotGlyphInfo *mapName2Glyph(hotCtx g, char *gname, char **useAliasDB) {
 
     if (useAliasDB != NULL) {
         if (g->cb.getFinalGlyphName != NULL) {
-            *useAliasDB = g->cb.getFinalGlyphName(g->cb.ctx, gname);
+            *useAliasDB = g->cb.getFinalGlyphName(g->cb.ctx, (char *)gname);
             if (strcmp(*useAliasDB, gname) == 0)
                 *useAliasDB = NULL;
             else
@@ -452,7 +452,7 @@ hotGlyphInfo *mapName2Glyph(hotCtx g, char *gname, char **useAliasDB) {
             return NULL;
         return mapCID2Glyph(g, cid);
     }
-    found = (hotGlyphInfo **)bsearch(realName, h->sort.gname.array,
+    found = (hotGlyphInfo **)bsearch((char *)realName, h->sort.gname.array,
                                      h->sort.gname.cnt, sizeof(hotGlyphInfo *),
                                      matchGlyphName);
     if (found != NULL) {
@@ -463,24 +463,21 @@ hotGlyphInfo *mapName2Glyph(hotCtx g, char *gname, char **useAliasDB) {
 }
 
 void mapGID2Name(hotCtx g, GID gid, char *msg) {
-    int len;
     hotGlyphInfo *hGID = &g->font.glyphs.array[gid];
 
     if (hGID->srcName == NULL) {
         sprintf(msg, "%s", hGID->gname.str);
-        len = strlen(msg);
     } else {
         if (g->convertFlags & HOT_CONVERT_FINAL_NAMES)
             sprintf(msg, "%s", hGID->gname.str);
         else
             sprintf(msg, "%s", hGID->srcName);
-        len = strlen(msg);
     }
 }
 
 /* Map glyph name to GID; using alias db if present (see mapName2Glyph comments
    for useAliasDB details) */
-GID mapName2GID(hotCtx g, char *gname, char **useAliasDB) {
+GID mapName2GID(hotCtx g, const char *gname, char **useAliasDB) {
     hotGlyphInfo *gi = mapName2Glyph(g, gname, useAliasDB);
     return (gi != NULL) ? GET_GID(gi) : GID_UNDEF;
 }
@@ -835,7 +832,7 @@ static void readRange(hotCtx g, psToken *last, char rangeType, int *isMac,
 
         if (codespace) {
             if (i == 0) {
-                dnaINIT(g->dnaCtx, tmpCodespace, 5, 10);
+                dnaINIT(g->DnaCTX, tmpCodespace, 5, 10);
             }
             if (*isMac != 1) {
                 *isMac = (loLength == 1);
@@ -1864,6 +1861,7 @@ static void setOS_2Fields(hotCtx g) {
 }
 
 /* Create a custom cmap which stores the custom PS encoding. */
+#if 0
 static void makeCustomcmap(hotCtx g) {
     long i;
     uint8_t charset = g->font.win.CharSet;
@@ -1892,6 +1890,7 @@ static void makeCustomcmap(hotCtx g) {
     }
     cmapEndEncoding(g); /* Custom */
 }
+#endif
 
 /* Check if Mac heuristic glyphs are present in the given encoding (don't check
    unencoded glyphs). Return codePage index if detected, -1 otherwise. (This
@@ -2280,7 +2279,7 @@ static void AFMPrintCharMetrics(hotCtx g) {
         /* Caution: multiply encoded glyphs             */
         long nGlyphs = g->font.glyphs.cnt;
         dnaDCL(AFMChar, chars);
-        dnaINIT(g->dnaCtx, chars, 400, 7000);
+        dnaINIT(g->DnaCTX, chars, 400, 7000);
 
         for (i = 1; i < nGlyphs; i++) {
             cffSupCode *sup;
@@ -2344,7 +2343,7 @@ static void AFMPrintKernData(hotCtx g) {
     int i;
     int nPairs = g->font.kern.pairs.cnt;
     dnaDCL(KernNamePair, pairs);
-    dnaINIT(g->dnaCtx, pairs, 1500, 1000);
+    dnaINIT(g->DnaCTX, pairs, 1500, 1000);
 
     if (nPairs == 0) {
         return;

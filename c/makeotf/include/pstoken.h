@@ -67,10 +67,6 @@ typedef struct {
     void (*fatal)(void *ctx);
     void (*message)(void *ctx, int type, char *text); /* (optional) */
 
-    /* Memory management */
-    void *(*malloc)(void *ctx, size_t size);
-    void (*free)(void *ctx, void *ptr);
-
     /* PostScript data input */
     char *(*psId)(void *ctx); /* Data id (optional) */
     char *(*psRefill)(void *ctx, long *count);

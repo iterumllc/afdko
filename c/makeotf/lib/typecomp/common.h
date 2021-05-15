@@ -52,9 +52,12 @@ void CDECL tcWarning(tcCtx g, char *fmt, ...);
 void CDECL tcNote(tcCtx g, char *fmt, ...);
 
 /* --- Memory management --- */
-#define MEM_NEW(g, s) g->cb.malloc(g->cb.ctx, (s))
-#define MEM_RESIZE(g, p, s) g->cb.realloc(g->cb.ctx, (p), (s))
-#define MEM_FREE(g, p) g->cb.free(g->cb.ctx, (p))
+extern void *tcMemNew(tcCtx g, size_t s);
+extern void *tcMemResize(tcCtx g, void *old, size_t s);
+extern void tcMemFree(tcCtx g, void *ptr);
+#define MEM_NEW(g, s) tcMemNew((g), (s))
+#define MEM_RESIZE(g, p, s) tcMemResize((g), (p), (s))
+#define MEM_FREE(g, p) tcMemFree((g), (p))
 
 /* --- Output interface --- */
 void tcOut2(tcCtx g, short value);

@@ -32,8 +32,8 @@ struct hmtxCtx_ {
 void hmtxNew(hotCtx g) {
     hmtxCtx h = MEM_NEW(g, sizeof(struct hmtxCtx_));
 
-    dnaINIT(g->dnaCtx, h->tbl.hMetrics, 315, 14000);
-    dnaINIT(g->dnaCtx, h->tbl.leftSideBearing, 315, 14000);
+    dnaINIT(g->DnaCTX, h->tbl.hMetrics, 315, 14000);
+    dnaINIT(g->DnaCTX, h->tbl.leftSideBearing, 315, 14000);
 
     /* Link contexts */
     h->g = g;

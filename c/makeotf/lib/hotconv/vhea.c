@@ -9,7 +9,7 @@
 
 #include "vhea.h"
 #include "vmtx.h"
-#include "map.h"
+#include "hotmap.h"
 
 #include <math.h>
 

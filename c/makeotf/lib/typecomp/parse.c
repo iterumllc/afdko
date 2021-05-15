@@ -2532,8 +2532,6 @@ void parseNew(tcCtx g) {
     /* Initialize PostScript callbacks */
     h->psCB.ctx = g->cb.ctx;
     h->psCB.fatal = g->cb.fatal;
-    h->psCB.malloc = g->cb.malloc;
-    h->psCB.free = g->cb.free;
     h->psCB.psId = g->cb.psId;
     h->psCB.psRefill = g->cb.psRefill;
     h->psCB.buf = &h->buf;

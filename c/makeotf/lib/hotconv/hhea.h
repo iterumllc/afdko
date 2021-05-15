@@ -7,6 +7,10 @@
 
 #include "common.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define hhea_ TAG('h', 'h', 'e', 'a')
 
 /* Standard functions */
@@ -18,5 +22,9 @@ void hheaFree(hotCtx g);
 
 /* Supplementary functions */
 void hheaSetCaretOffset(hotCtx g, short caretOffset);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* HOTCONV_HHEA_H */

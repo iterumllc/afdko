@@ -107,9 +107,9 @@ void sfntNew(hotCtx g) {
     g->ctx.sfnt = h;
 
     /* Initialize tables */
-    dnaINIT(g->dnaCtx, h->tbl.directory, SFNT_TABLE_CNT, 5);
+    dnaINIT(g->DnaCTX, h->tbl.directory, SFNT_TABLE_CNT, 5);
 
-    dnaINIT(g->dnaCtx, h->funcs, SFNT_TABLE_CNT + 2, 5);
+    dnaINIT(g->DnaCTX, h->funcs, SFNT_TABLE_CNT + 2, 5);
     dnaSET_CNT(h->funcs, SFNT_TABLE_CNT);
     COPY(h->funcs.array, g_funcs, SFNT_TABLE_CNT);
     for (i = 0; i < SFNT_TABLE_CNT; i++) {

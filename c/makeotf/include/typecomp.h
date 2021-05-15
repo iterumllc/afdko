@@ -65,19 +65,6 @@ struct tcCallbacks_ {
    tcERROR, and tcFATAL. The client can handle messages in any manner they
    choose.
 
-   Memory management: */
-
-    void *(*malloc)(void *ctx, size_t size);
-    void *(*realloc)(void *ctx, void *old, size_t size);
-    void (*free)(void *ctx, void *ptr);
-
-    /* [Required] The malloc(), realloc(), and free() functions manage memory in the
-   same manner as the Standard C Library functions of the same name. (This
-   means that they must observe the alignment requirements imposed by the
-   standard.) The client is required to handle any error conditions that may
-   arise. Specifically, a client must ensure requested memory is available and
-   must never return a NULL pointer from malloc() or realloc().
-
    PostScript data input: */
 
     char *(*psId)(void *ctx);

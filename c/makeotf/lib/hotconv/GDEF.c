@@ -87,7 +87,6 @@ static LOffset createMarkAttachClassDef(GDEFCtx h);
 static LOffset createMarkSetClassDef(GDEFCtx h, hotCtx g);
 static void writeAttachTable(hotCtx g, GDEFCtx h);
 static void writeLigCaretTable(hotCtx g, GDEFCtx h);
-static void writeMarkSetClassDef(hotCtx g, GDEFCtx h);
 static void writeMarkSetClassTable(hotCtx g, GDEFCtx h);
 
 /* --------------------------- Context Definition -------------------------- */
@@ -116,11 +115,11 @@ void GDEFNew(hotCtx g) {
     /* Link contexts */
     h->g = g;
     g->ctx.GDEF = h;
-    dnaINIT(g->dnaCtx, h->glyphClasses, 50, 200);
-    dnaINIT(g->dnaCtx, h->attachEntries, 50, 200);
-    dnaINIT(g->dnaCtx, h->ligCaretEntries, 50, 200);
-    dnaINIT(g->dnaCtx, h->markAttachClasses, 50, 200);
-    dnaINIT(g->dnaCtx, h->markSetClasses, 50, 200);
+    dnaINIT(g->DnaCTX, h->glyphClasses, 50, 200);
+    dnaINIT(g->DnaCTX, h->attachEntries, 50, 200);
+    dnaINIT(g->DnaCTX, h->ligCaretEntries, 50, 200);
+    dnaINIT(g->DnaCTX, h->markAttachClasses, 50, 200);
+    dnaINIT(g->DnaCTX, h->markSetClasses, 50, 200);
 
     h->offset = 0;
     h->tbl.GlyphClassDefOffset = 0;
@@ -492,7 +491,7 @@ int addAttachEntryGDEF(hotCtx g, GNode *glyphNode, unsigned short contour) {
         unsigned short *indexEntry;
         attachEntry = dnaNEXT(h->attachEntries);
         attachEntry->gid = gid;
-        dnaINIT(g->dnaCtx, attachEntry->contourIndices, 10, 10);
+        dnaINIT(g->DnaCTX, attachEntry->contourIndices, 10, 10);
         indexEntry = dnaNEXT(attachEntry->contourIndices);
         *indexEntry = contour;
     }
@@ -523,7 +522,7 @@ void addLigCaretEntryGDEF(
     lge->gid = gid;
     lge->CaretCount = caretCount;
     lge->format = format;
-    dnaINIT(g->dnaCtx, lge->caretTables, caretCount, caretCount);
+    dnaINIT(g->DnaCTX, lge->caretTables, caretCount, caretCount);
     for (i = 0; i < caretCount; i++)
     {
         CaretTable *ct;
@@ -711,7 +710,6 @@ static void validateGlyphClasses(GDEFCtx h, GNode **classList, long numClasses) 
                 className2 = "mark attachment class 2";
             }
             for (p1 = headNode1; p1 != NULL;) {
-                GNode *prev = NULL;
                 for (p2 = headNode2; p2 != NULL;) {
                     if (p1->gid == p2->gid) {
                         hadConflictingClassDef = 1;
@@ -720,7 +718,6 @@ static void validateGlyphClasses(GDEFCtx h, GNode **classList, long numClasses) 
                             hotMsg(g, hotWARNING, "GDEF MarkAttachment. Glyph '%s' gid '%d'. previous glyph class '%s' conflicts with new class '%s'.", g->note.array, p1->gid, className1, className2);
                         }
                     }
-                    prev = p2;
                     p2 = p2->nextCl;
                 }
                 p1 = p1->nextCl;
@@ -783,7 +780,7 @@ static LOffset createMarkSetClassDef(GDEFCtx h, hotCtx g) {
     Offset size = (Offset)MARK_SET_TABLE_SIZE(h->markSetClasses.cnt);
     h->markSetClassTable.MarkSetTableFormat = 1;
     h->markSetClassTable.MarkSetCount = (unsigned short)h->markSetClasses.cnt;
-    dnaINIT(g->dnaCtx, h->markSetClassTable.markSetEntries, h->markSetClasses.cnt, 10);
+    dnaINIT(g->DnaCTX, h->markSetClassTable.markSetEntries, h->markSetClasses.cnt, 10);
     for (i = 0; i < h->markSetClasses.cnt; i++) {
         GNode *p;
         otlTbl otl;

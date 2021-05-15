@@ -8,6 +8,10 @@
 #include "common.h"
 #include "feat.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /* Module-wide functions */
 void otlNew(hotCtx g);
 void otlFree(hotCtx g);
@@ -84,7 +88,7 @@ void otlCoverageWrite(hotCtx g, otlTbl t);
 /* --- Class table --- */
 
 void otlClassBegin(hotCtx g, otlTbl t);
-void otlClassAddMapping(hotCtx g, otlTbl t, GID glyph, unsigned class);
+void otlClassAddMapping(hotCtx g, otlTbl t, GID glyph, unsigned cls);
 Offset otlClassEnd(hotCtx g, otlTbl t);
 void otlClassWrite(hotCtx g, otlTbl t);
 
@@ -98,5 +102,9 @@ void otlDeviceWrite(hotCtx g, otlTbl t);
 
 LOffset otlGetCoverageSize(otlTbl t);
 LOffset otlGetClassSize(otlTbl t);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* OTL_H */

@@ -8,6 +8,10 @@
 #include "common.h"
 #include "feat.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define GDEF_ TAG('G', 'D', 'E', 'F')
 #define kMaxMarkAttachClasses 15
 
@@ -28,5 +32,9 @@ void addLigCaretEntryGDEF(hotCtx g, GNode *glyphNode, unsigned short* caretValue
 unsigned short addGlyphMarkClassGDEF(hotCtx g, GNode *markClass);
 
 unsigned short addMarkSetClassGDEF(hotCtx g, GNode *markClass);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* HOTCONV_GDEF_H */

@@ -65,7 +65,7 @@ typedef struct {
 
     /* Exception handling */
     void (*fatal)(void *ctx);
-    void (*message)(void *ctx, int type, char *text); /* (optional) */
+    void (*message)(void *ctx, int type, const char *text); /* (optional) */
 
     /* PostScript data input */
     char *(*psId)(void *ctx); /* Data id (optional) */

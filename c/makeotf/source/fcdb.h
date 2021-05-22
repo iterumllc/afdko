@@ -84,7 +84,7 @@ struct fcdbCallbacks_ {
     int (*addname)(void *ctx,
                    unsigned short platformId, unsigned short platspecId,
                    unsigned short languageId, unsigned short nameId,
-                   char *str);
+                   const char *str);
 
     /* [Optional] addname() is called in order to pass back name data to the
    client. It is called in response to a client call to fcdbGetRec() during the

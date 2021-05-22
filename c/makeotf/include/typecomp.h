@@ -58,7 +58,7 @@ struct tcCallbacks_ {
    NOT return and the client should use longjmp() to return control to a point
    prior to calling tcNew(). */
 
-    void (*message)(void *ctx, int type, char *text);
+    void (*message)(void *ctx, int type, const char *text);
 
     /* [Optional] message() simply passes a message back to the client as a
    null-terminated string. Four message types are supported: tcNOTE, tcWARNING,

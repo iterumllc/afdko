@@ -199,7 +199,7 @@ struct hotCallbacks_ {
    must NOT return and the client should use longjmp() to return control to a
    point prior to calling tcNew(). */
 
-    void (*message)(void *ctx, int type, char *text); /* (optional) */
+    void (*message)(void *ctx, int type, const char *text); /* (optional) */
 
     /* [Optional] message() simply passes a message back to the client as a
    null-terminated string. Four message types are supported: hotNOTE,
@@ -642,7 +642,7 @@ Blank lines, and characters following the comment char "#" on a line, are ignore
 int hotAddName(hotCtx g,
                unsigned short platformId, unsigned short platspecId,
                unsigned short languageId, unsigned short nameId,
-               signed char *str);
+               const char *str);
 
 /* hotAddName() is called to add menu names. This name will be directly stored
    in the name table using the various id arguments specified. The actual name

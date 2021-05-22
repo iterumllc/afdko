@@ -23,9 +23,10 @@
 #define kDEFAULT_MARKCLASS_NAME "FDK_DEFAULT_MARK_CLASS"
 #define kDEFAULT_COMPONENTCLASS_NAME "FDK_DEFAULT_COMPONENT_CLASS"
 
+const int FeatCtx::kMaxCodePageValue {32};
+const int FeatCtx::kCodePageUnSet {-1};
+
 const int MAX_NUM_LEN {3};        // For glyph ranges
-const int kMaxCodePageValue {32};
-const int kCodePageUnSet {-1};
 const int AALT_INDEX {-1};        // used as feature index for sorting alt glyphs in rule for aalt feature
 
 #define USE_LANGSYS_MSG                                                   \
@@ -42,14 +43,6 @@ bool FeatCtx::LangSys::operator==(const FeatCtx::LangSys &b) const {
 
 bool FeatCtx::State::operator==(const FeatCtx::State &b) const {
     return memcmp(this, &b, sizeof(State))==0;
-}
-
-bool FeatCtx::AnchorDef::operator<(const FeatCtx::AnchorDef &b) const {
-    return name < b.name;
-}
-
-bool FeatCtx::ValueDef::operator<(const FeatCtx::ValueDef &b) const {
-    return name < b.name;
 }
 
 bool FeatCtx::AALT::FeatureRecord::operator==(const FeatCtx::AALT::FeatureRecord &b) const {
@@ -90,7 +83,7 @@ void FeatCtx::fill(void) {
     aaltCreate();
 
     if ( gFlags & (seenIgnoreClassFlag | seenMarkClassFlag) )
-        ; // XXX creatDefaultGDEFClasses();
+        createDefaultGDEFClasses();
 
     reportUnusedaaltTags();
 
@@ -214,7 +207,7 @@ GNode *FeatCtx::newNode() {
     ret->nextSeq = NULL;
     ret->nextCl = NULL;
     ret->lookupLabelCount = 0;
-    ret->metricsInfo = NULL;
+    ret->metricsInfo = METRICSINFOEMPTY;
     ret->aaltIndex = 0;
     ret->markClassName = NULL;
     initAnchor(&ret->markClassAnchorInfo);
@@ -296,16 +289,42 @@ void FeatCtx::msgPrefix(char **premsg, char **prefix) {
 
 void FeatCtx::featMsg(int msgType, const char *fmt, ...) {
     va_list ap;
-    std::string buf;
+    std::vector<char> buf;
+    buf.resize(128);
 
     va_start(ap, fmt);
-    buf.reserve(128);
-    int l = VSPRINTF_S(&buf[0], 128, fmt, ap) + 1;
+    int l = VSPRINTF_S(buf.data(), 128, fmt, ap) + 1;
     if ( l > 128 ) {
-        buf.reserve(l);
-        VSPRINTF_S(&buf[0], l, fmt, ap);
+        buf.resize(l);
+        VSPRINTF_S(buf.data(), l, fmt, ap);
     }
-    hotMsg(g, msgType, buf.c_str());
+    hotMsg(g, msgType, buf.data());
+}
+
+void FeatCtx::featMsg(int msgType, FeatVisitor *v,
+                      antlr4::Token *t, const char *fmt, ...) {
+    va_list ap;
+    std::vector<char> buf;
+    buf.resize(128);
+    FeatVisitor *tmpv = current_visitor;
+    antlr4::Token *tmpt = v->current_msg_token;
+
+    va_start(ap, fmt);
+    int l = VSPRINTF_S(buf.data(), 128, fmt, ap) + 1;
+    if ( l > 128 ) {
+        buf.resize(l);
+        VSPRINTF_S(buf.data(), l, fmt, ap);
+    }
+
+    if ( v != tmpv ) {
+        current_visitor = v;
+        v->need_file_msg = tmpv->need_file_msg = true;
+    }
+
+    v->current_msg_token = t;
+    hotMsg(g, msgType, buf.data());
+    v->current_msg_token = tmpt;
+    current_visitor = tmpv;
 }
 
 const char *FeatCtx::tokstr() {
@@ -437,16 +456,16 @@ GNode **FeatCtx::copyGlyphClass(GNode **dst, GNode *src) {
 /* Sort a glyph class; head node retains flags of original head node */
 /* nextSeq, flags, markClassName, and markCnt of head now are zeroed. */
 
-void FeatCtx::sortGlyphClass(GNode **list, int unique, int reportDups) {
+void FeatCtx::sortGlyphClass(GNode **list, bool unique, bool reportDups) {
     unsigned long i;
     GNode *p = *list;
     /* Preserve values that are kept with the head node only, and then zero them in the head node. */
     GNode *nextTarg = p->nextSeq;
     short flags = (*list)->flags;
-    MetricsInfo *metricsInfo = p->metricsInfo;
+    MetricsInfo metricsInfo = p->metricsInfo;
     char *markClassName = p->markClassName;
     p->markClassName = NULL;
-    p->metricsInfo = NULL;
+    p->metricsInfo = METRICSINFOEMPTY;
     p->nextSeq = NULL;
     p->flags = 0;
 
@@ -514,7 +533,7 @@ void FeatCtx::defineCurrentGC(const std::string &gcname) {
     curGCName = gcname;
 }
 
-void FeatCtx::openAsCurrentGC(const std::string &gcname) {
+bool FeatCtx::openAsCurrentGC(const std::string &gcname) {
     resetCurrentGC();
     auto search = namedGlyphClasses.find(gcname);
     if ( search != namedGlyphClasses.end() ) {
@@ -524,13 +543,15 @@ void FeatCtx::openAsCurrentGC(const std::string &gcname) {
         curGCTailAddr = &nextClass->nextCl;
         // If the class is found don't set curGCName as it doesn't need to
         // be stored on Close.
+        return true;
     } else {
         curGCName = gcname;
+        return false;
     }
 }
 
 GNode *FeatCtx::finishCurrentGC() {
-    if ( !curGCName.empty() )
+    if ( !curGCName.empty() && curGCHead != nullptr )
         namedGlyphClasses.insert({curGCName, curGCHead});
 
     GNode *ret = curGCHead;
@@ -965,6 +986,38 @@ int FeatCtx::startScriptOrLang(TagType type, Tag tag) {
     return 1;
 }
 
+/* Include dflt rules in lang-specific behavior if includeDFLT != 0 */
+
+void FeatCtx::includeDFLT(bool includeDFLT, int langChange, bool seenOD) {
+    if (seenOD && !seenOldDFLT) {
+        seenOldDFLT = true;
+        featMsg(hotWARNING, "Use of includeDFLT and excludeDFLT tags has been deprecated. It will work, but please use 'include_dflt' and 'exclude_dflt' tags instead.");
+    }
+    /* Set value */
+    if (langChange) {
+        include_dflt = includeDFLT;
+    } else if (includeDFLT != include_dflt) {
+        featMsg(hotERROR, 
+            "can't change whether a language should include dflt rules once "
+            "this has already been indicated");
+    }
+
+    if (includeDFLT) {
+        /* Include dflt rules for current script and explicit language    */
+        /* statement. Languages which don't exclude_dflt get the feature- */
+        /* level defaults at the end of the feature.                      */
+        for (auto &i : DFLTLkps)
+            callLkp(i);
+    } else {
+        /* Defaults have been explicitly excluded from the this language.  */
+        /* Find the matching  script-lang lang-sys, and set the flag so it */
+        /* won't add the feature level defaults at the end of the feature. */
+        auto ls = langSysMap.find({curr.script, curr.language});
+        if ( ls != langSysMap.end() )
+            ls->second = true;
+    }
+}
+
 /* Add a language system that all features (that do not contain language or
    script statements) would be registered under */
 
@@ -999,12 +1052,12 @@ void FeatCtx::addLangSys(Tag script, Tag language, bool checkBeforeFeature,
     }
 
     /* First check if already exists */
-    if ( langSysSet.find({script, language}) != langSysSet.end() ) {
+    if ( langSysMap.find({script, language}) != langSysMap.end() ) {
         featMsg(hotWARNING, "Duplicate specification of language system");
         return;
     }
 
-    langSysSet.emplace(script, language);
+    langSysMap.emplace(LangSys{script, language}, false);
 
 #if HOT_DEBUG
     if (!checkBeforeFeature) {
@@ -1017,21 +1070,21 @@ void FeatCtx::addLangSys(Tag script, Tag language, bool checkBeforeFeature,
 /* Register current feature under remaining language systems */
 
 void FeatCtx::registerFeatureLangSys() {
-    for (auto &ls : langSysSet) {
+    for (auto &ls : langSysMap) {
         bool seenGSUB = false, seenGPOS = false;
 
         /* If we have seen an explicit language statement for this script, */
         /* then the default lookups have already been included ( or        */
         /* excluded) by the includeDDflt function.                         */
-        if (ls.excludeDflt) {
-            // XXX ls.excludeDflt = false; /* Clear this so it won't affect the next feature */
+        if (ls.second) {
+            ls.second = false;
             continue;
         }
 
         for (const auto &lkp : lookup) {
             if (lkp.tbl == GSUB_) {
                 if (!seenGSUB) {
-                    GSUBFeatureBegin(g, ls.script, ls.lang, curr.feature);
+                    GSUBFeatureBegin(g, ls.first.script, ls.first.lang, curr.feature);
                     seenGSUB = 1;
                 }
                 GSUBLookupBegin(g, lkp.lkpType, lkp.lkpFlag,
@@ -1041,7 +1094,7 @@ void FeatCtx::registerFeatureLangSys() {
             } else {
                 /* lkp->tbl == GPOS_ */
                 if (!seenGPOS) {
-                    GPOSFeatureBegin(g, ls.script, ls.lang, curr.feature);
+                    GPOSFeatureBegin(g, ls.first.script, ls.first.lang, curr.feature);
                     seenGPOS = true;
                 }
                 GPOSLookupBegin(g, lkp.lkpType, lkp.lkpFlag,
@@ -1073,15 +1126,15 @@ void FeatCtx::startFeature(Tag tag) {
 
     lookup.clear();
     script.clear();
-    if (langSysSet.size() == 0) {
+    if (langSysMap.size() == 0) {
         featMsg(hotWARNING,
                 "[internal] Feature block seen before any language system statement. You should place languagesystem statements before any feature definition");
         addLangSys(DFLT_, dflt_, false);
     }
-    tagAssign(langSysSet.begin()->script, scriptTag, false);
+    tagAssign(langSysMap.cbegin()->first.script, scriptTag, false);
 
     language.clear();
-    tagAssign(langSysSet.begin()->lang, languageTag, false);
+    tagAssign(langSysMap.cbegin()->first.lang, languageTag, false);
 
     include_dflt = true;
     DFLTLkps.clear();
@@ -1138,11 +1191,60 @@ void FeatCtx::closeFeatScriptLang(State &st) {
     }
 }
 
+void FeatCtx::startLookup(const std::string &name, bool isTopLevel) {
+    if (isTopLevel) {
+        /* This is a standalone lookup, used outside of a feature block. */
+        /* Add it to the dummy feature 'A\0\0A'                           */
+        startFeature(TAG_STAND_ALONE);
+        startScriptOrLang(scriptTag, TAG_STAND_ALONE);
+    } else {
+        if (curr.feature == aalt_) {
+            featMsg(hotERROR, "\"lookup\" use not allowed in 'aalt' feature");
+            return;
+        }
+        if (curr.feature == size_) {
+            featMsg(hotERROR,
+                    "\"lookup\" use not allowed anymore in 'size'"
+                    " feature; " USE_LANGSYS_MSG);
+            return;
+        }
+    }
+
+    DF(2, (stderr, "# at start of named lookup %s\n", name));
+    if (name2NamedLkp(name) != NULL)
+        featMsg(hotFATAL, "lookup name \"%s\" already defined", name);
+
+    currNamedLkp = getNextNamedLkpLabel(name, isTopLevel);
+    /* State will be recorded at end of block section, below */
+}
+
+void FeatCtx::endLookup() {
+    if ( curr.feature == aalt_ && curr.feature == size_)
+        return;
+
+    NamedLkp *c = lab2NamedLkp(currNamedLkp);
+
+    if (c == NULL) {
+        featMsg(hotFATAL, "[internal] label not found\n");
+    }
+    DF(2, (stderr, "# at end of named lookup %s\n", c->name.c_str()));
+
+    if (c->isTopLevel)
+        endFeature(); 
+
+    endOfNamedLkpOrRef = true;
+
+    /* Store state for future lookup references to it */
+    c->state = curr;
+
+    currNamedLkp = LAB_UNDEF;
+}
+
 /* Validate and set a particular flag/subcomponent of the lookupflag. markType
    only used if attr is otlMarkAttachmentType */
 
-void FeatCtx::setLkpFlagAttribute(unsigned short *val, unsigned int attr,
-                                  unsigned short markAttachClassIndex) {
+uint16_t FeatCtx::setLkpFlagAttribute(uint16_t val, unsigned int attr,
+                                      uint16_t markAttachClassIndex) {
     if (attr > 1) {
         /* 1 is the RTL flag - does not need to set this */
         gFlags |= seenIgnoreClassFlag;
@@ -1151,39 +1253,34 @@ void FeatCtx::setLkpFlagAttribute(unsigned short *val, unsigned int attr,
     if (attr == otlMarkAttachmentType) {
         if (markAttachClassIndex == 0) {
             featMsg(hotERROR, "must specify non-zero MarkAttachmentType value");
-        } else if (*val & attr) {
+        } else if (val & attr) {
             featMsg(hotERROR,
                     "MarkAttachmentType already specified in this statement");
         } else {
-            *val |= (markAttachClassIndex & 0xFF) << 8;
+            val |= (markAttachClassIndex & 0xFF) << 8;
         }
     } else if (attr == otlUseMarkFilteringSet) {
-        if (*val & attr) {
+        if (val & attr) {
             featMsg(hotERROR,
                     "UseMarkSetType already specified in this statement");
         }
         curr.markSetIndex = markAttachClassIndex;
-        *val |= attr;
+        val |= attr;
     } else {
-        if (*val & attr) {
+        if (val & attr) {
             featMsg(hotWARNING,
                     "\"%s\" repeated in this statement; ignoring", tokstr());
         } else {
-            *val |= attr;
+            val |= attr;
         }
     }
+    return val;
 }
 
-void FeatCtx::setLkpFlag(unsigned short flagVal) {
-    unsigned short flag = flagVal;
-    if (curr.feature == aalt_ || curr.feature == size_) {
-        featMsg(hotERROR,
-                "\"lookupflag\" use not allowed in 'aalt' or 'size' feature");
-    } else if (flag == curr.lkpFlag) {
-        ; /* Statement has no effect */
-    } else {
-        curr.lkpFlag = flag;
-    }
+void FeatCtx::setLkpFlag(uint16_t flag) {
+    if (curr.feature == aalt_ || curr.feature == size_)
+        featMsg(hotERROR, "\"lookupflag\" use not allowed in 'aalt' or 'size' feature");
+    curr.lkpFlag = flag;
     /* if UseMarkSet, then the markSetIndex is set in setLkpFlagAttribute() */
 }
 
@@ -1232,7 +1329,7 @@ void FeatCtx::callLkp(State &st) {
     endOfNamedLkpOrRef = true;
 }
 
-void FeatCtx::useLkp(const std::string name) {
+void FeatCtx::useLkp(const std::string &name) {
     NamedLkp *lkp = name2NamedLkp(name);
 
     if (curr.feature == aalt_) {
@@ -1259,6 +1356,25 @@ void FeatCtx::useLkp(const std::string name) {
     }
 }
 
+/* Add feature parameters */
+
+void FeatCtx::addFeatureParam(const std::vector<uint16_t> &params) {
+    switch (curr.feature) {
+        case size_:
+            prepRule(GPOS_, GPOSFeatureParam, NULL, NULL);
+
+            GPOSAddSize(g, (short *) params.data(), params.size());
+
+            wrapUpRule();
+
+            break;
+
+        default:
+            featMsg(hotERROR,
+                    "A feature parameter is supported only for the 'size' feature.");
+    }
+}
+
 void FeatCtx::subtableBreak() {
     bool retval = false;
 
@@ -1280,7 +1396,7 @@ void FeatCtx::subtableBreak() {
         featMsg(hotWARNING, "subtable break is supported only in class kerning lookups");
 }
 
-FeatCtx::NamedLkp *FeatCtx::name2NamedLkp(const std::string lkpName) {
+FeatCtx::NamedLkp *FeatCtx::name2NamedLkp(const std::string &lkpName) {
     for (auto &it : namedLkp) {
         if ( it.name == lkpName )
             return &it;
@@ -1297,17 +1413,19 @@ FeatCtx::NamedLkp *FeatCtx::lab2NamedLkp(Label lab) {
         return &namedLkp[baselab];
 }
 
-Label FeatCtx::getNextNamedLkpLabel() {
-    if (namedLkpLabelCnt > FEAT_NAMED_LKP_END) {
+Label FeatCtx::getNextNamedLkpLabel(const std::string &str, bool isa) {
+    static_assert( FEAT_NAMED_LKP_BEG == 0 );
+    if (namedLkp.size() >= FEAT_NAMED_LKP_END) {
         featMsg(hotFATAL,
                 "[internal] maximum number of named lookups reached:"
                 " %d",
-                FEAT_NAMED_LKP_END - FEAT_NAMED_LKP_BEG + 1);
+                FEAT_NAMED_LKP_END + 1);
     }
-    return namedLkpLabelCnt++;
+    namedLkp.push_back({str, isa});
+    return namedLkp.size();
 }
 
-Label FeatCtx::getLabelIndex(const std::string name) {
+Label FeatCtx::getLabelIndex(const std::string &name) {
     NamedLkp *curr = name2NamedLkp(name);
     if (curr == NULL) {
         featMsg(hotFATAL, "lookup name \"%s\" not defined", name.c_str());
@@ -1329,6 +1447,288 @@ void FeatCtx::startTable(Tag tag) {
         featMsg(hotERROR, "table already specified");
 }
 
+void FeatCtx::setGDEFGlyphClassDef(GNode *simple, GNode *ligature, GNode *mark,
+                                   GNode *component) {
+    gFlags |= seenGDEFGC;
+    setGlyphClassGDef(g, simple, ligature, mark, component);
+}
+
+void FeatCtx::createDefaultGDEFClasses() {
+    if ( !(gFlags & seenGDEFGC) ) {
+        GNode *classes[4] = {nullptr};
+        const char *classnames[4] = { kDEFAULT_BASECLASS_NAME,
+                                      kDEFAULT_LIGATURECLASS_NAME,
+                                      kDEFAULT_MARKCLASS_NAME,
+                                      kDEFAULT_COMPONENTCLASS_NAME };
+
+        /* The source glyph classes are all named classes. Named class      */
+        /* glyphs get recycled when featFree() is called so we need to      */
+        /* make a copy of these classes here and recycle the copy after in  */
+        /* GDEF.c::createGlyphClassDef(). This is because                   */
+        /* createGlyphClassDef deletes glyphs from within the class lists   */
+        /* to eliminate duplicates. If we operate on a named class list,    */
+        /* then any deleted duplicated glyphs gets deleted again when       */
+        /* hashFree() is called. Also, the hash element head points to the  */
+        /* original first glyph, which may be sorted further down the list. */
+
+        for (int i = 0; i < 4; ++i) {
+            openAsCurrentGC(classnames[i]);
+            if (curGCHead != NULL) {
+                copyGlyphClass(classes + i, curGCHead);
+                sortGlyphClass(classes + i, true, false);
+            }
+            finishCurrentGC();
+        }
+
+        setGlyphClassGDef(g, classes[0], classes[1], classes[2], classes[3]);
+    }
+}
+
+void FeatCtx::setFontRev(const std::string &rev) {
+    char *fraction = 0;
+    double minor = 0;
+
+    long major = strtol(rev.c_str(), &fraction, 10);
+
+    if ((fraction != 0) && (strlen(fraction) > 0)) {
+        short strLen = strlen(fraction);
+        minor = strtod(fraction, NULL);
+
+        if (strLen != 4) {
+            double version = major + minor;
+            featMsg(hotWARNING, "head FontRevision entry <%s> should have 3 fractional decimal places. Stored as <%.3f>", rev.c_str(), version);
+        }
+    } else {
+        featMsg(hotWARNING, "head FontRevision entry <%ld> should have 3 fractional decimal places; it now has none.", major);
+    }
+
+    /* limit of 32767 as anything higher sets the sign bit to negative */
+    major = MIN(major, 32767);
+
+    /* Convert to Fixed */
+    g->font.version.otf = (Fixed)((major + minor) * 65536.0);
+}
+
+/* Add name string to name table. */
+
+void FeatCtx::addNameString(long platformId, long platspecId,
+                            long languageId, long nameId, const std::string &str) {
+    bool nameError = false;
+    if ((nameId == 2) || (nameId == 6) || ((nameId >= 26) && (nameId <= 255)))
+        nameError = true;
+    else if ((nameId > 0) && ((nameId < 7) && (!(g->convertFlags & HOT_OVERRIDE_MENUNAMES)))) {
+        nameError = true;
+    }
+    if (nameError) {
+        featMsg(hotWARNING,
+               "name id %ld cannot be set from the feature file. "
+               "ignoring record", nameId);
+        return;
+    }
+
+    /* Add defaults */
+    if (platformId == -1) {
+        platformId = HOT_NAME_MS_PLATFORM;
+    }
+    if (platformId == HOT_NAME_MS_PLATFORM) {
+        if (platspecId == -1) {
+            platspecId = HOT_NAME_MS_UGL;
+        }
+        if (languageId == -1) {
+            languageId = HOT_NAME_MS_ENGLISH;
+        }
+    } else if (platformId == HOT_NAME_MAC_PLATFORM) {
+        if (platspecId == -1) {
+            platspecId = HOT_NAME_MAC_ROMAN;
+        }
+        if (languageId == -1) {
+            languageId = HOT_NAME_MAC_ENGLISH;
+        }
+    }
+
+    if (hotAddName(g,
+                   (unsigned short)platformId, (unsigned short)platspecId,
+                   (unsigned short)languageId, (unsigned short)nameId,
+                   str.c_str())) {
+        featMsg(hotERROR, "Bad string");
+    }
+}
+
+/* Add 'size' feature submenuname name string to name table. */
+
+void FeatCtx::addSizeNameString(long platformId, long platspecId,
+                                long languageId, const std::string &str) {
+    unsigned short nameID;
+
+    /* We only need to reserve a name ID *once*; after the first time, */
+    /* all subsequent sizemenunames will share the same nameID.        */
+    if (featNameID == 0) {
+        nameID = nameReserveUserID(g);
+        GPOSSetSizeMenuNameID(g, nameID);
+        featNameID = nameID;
+    } else {
+        nameID = featNameID;
+    }
+
+    addNameString(platformId, platspecId, languageId, nameID, str);
+}
+
+/* Add 'name for feature string to name table. */
+
+void FeatCtx::addFeatureNameString(long platformId, long platspecId,
+                                   long languageId, const std::string &str) {
+    unsigned short nameID;
+
+    /* We only need to reserve a name ID *once*; after the first time, */
+    /* all subsequent sizemenunames will share the same nameID.        */
+    if (featNameID == 0) {
+        nameID = nameReserveUserID(g);
+        GSUBSetFeatureNameID(g, curr.feature, nameID);
+        featNameID = nameID;
+    } else {
+        nameID = featNameID;
+    }
+
+    addNameString(platformId, platspecId, languageId, nameID, str);
+}
+
+void FeatCtx::addUserNameString(long platformId, long platspecId,
+                                long languageId, const std::string &str) {
+    unsigned short nameID;
+
+    /* We only need to reserve a name ID *once*. */
+    if (featNameID == 0) {
+        nameID = nameReserveUserID(g);
+        featNameID = nameID;
+    } else {
+        nameID = featNameID;
+    }
+
+    addNameString(platformId, platspecId, languageId, nameID, str);
+}
+
+/* Add vendor name to OS/2 table. */
+/* ------------------------------------------------------------------- */
+/* ------------------------------------------------------------------- */
+void FeatCtx::addVendorString(std::string str) {
+    bool tooshort = false;
+
+    while (str.size() < 4) {
+        str += ' ';
+        tooshort = true;
+    }
+    if (tooshort) {
+        featMsg(hotWARNING, "Vendor name too short. Padded automatically to 4 characters.");
+    }
+
+    if (str.size() > 4) {
+        featMsg(hotERROR, "Vendor name too long. Max is 4 characters.");
+    }
+
+    setVendId_str(g, str.c_str());
+}
+
+void FeatCtx::addFeatureNameParam() {
+    prepRule(GSUB_, GSUBFeatureNameParam, NULL, NULL);
+
+    GSUBAddFeatureMenuParam(g, &featNameID);
+
+    wrapUpRule();
+}
+
+void FeatCtx::addAnchorDef(const std::string &name, const AnchorDef &a) {
+    auto ret = anchorDefs.insert(std::make_pair(name, a));
+
+    if ( !ret.second )
+        featMsg(hotFATAL, "Named anchor definition '%s' is a a duplicate of an earlier named anchor definition.", name.c_str());
+}
+
+void FeatCtx::addAnchorByName(const std::string &name) {
+    auto search = anchorDefs.find(name);
+    if ( search == anchorDefs.end() ) {
+        featMsg(hotERROR, "Named anchor reference '%s' is not in list of named anchors.", name.c_str());
+        return;
+    }
+
+    addAnchorByValue(search->second, false);
+}
+
+void FeatCtx::addAnchorByValue(const AnchorDef &a, bool isNull) {
+    AnchorMarkInfo am;
+    initAnchor(&am);
+    am.x = a.x;
+    am.y = a.y;
+    if ( isNull ) {
+        am.format = 0;
+    } else if ( a.hasContour ) {
+        am.format = 2;
+        am.contourpoint = a.contourpoint;
+    } else {
+        am.format = 1;
+    }
+    anchorMarkInfo.push_back(am);
+}
+
+/* Make a copy of a string */
+
+static void copyStr(hotCtx g, char **dst, const char *src) {
+    if (src == NULL) {
+        *dst = NULL;
+    } else {
+        *dst = (char *) MEM_NEW(g, strlen(src) + 1);
+        strcpy(*dst, src);
+    }
+}
+
+/* Add new mark class definition */
+void FeatCtx::addMark(const std::string &name, GNode *targ) {
+    GNode *curNode;
+
+    /* save this anchor info in all glyphs of this mark class */
+    curNode = targ;
+    while (curNode != NULL) {
+        curNode->markClassAnchorInfo = anchorMarkInfo.back();
+        curNode = curNode->nextCl;
+    }
+
+    bool found = openAsCurrentGC(name);
+    addGlyphClassToCurrentGC(targ);
+
+    if ( curGCHead->flags & FEAT_USED_MARK_CLASS )
+        featMsg(hotERROR, "You cannot add glyphs to a mark class after the mark class has been used in a position statement. %s.", name.c_str());
+
+    if ( !found ) {
+        /* this is the first time this mark class name has been referenced; save the class name in the head node. */
+        copyStr(g, &curGCHead->markClassName, name.c_str());
+    }
+
+    finishCurrentGC(); // Save new entry if needed
+
+    /* add mark glyphs to default base class */
+    openAsCurrentGC(kDEFAULT_MARKCLASS_NAME);
+    addGlyphClassToCurrentGC(targ);
+    finishCurrentGC();
+
+    recycleNodes(targ);
+
+    gFlags |= seenMarkClassFlag;
+}
+
+void FeatCtx::addValueDef(const std::string &name, const MetricsInfo &mi) {
+    auto ret = valueDefs.insert(std::make_pair(name, mi));
+
+    if ( !ret.second )
+        featMsg(hotERROR, "Named value record definition '%s' is a a duplicate of an earlier named value record definition.", name.c_str());
+}
+
+void FeatCtx::getValueDef(const std::string &name, MetricsInfo &mi) {
+    auto search = valueDefs.find(name);
+    if ( search == valueDefs.end() )
+        featMsg(hotERROR, "Named value reference '%s' is not in list of named value records.", name.c_str());
+    else
+        mi = search->second;
+}
+
 void FeatCtx::prepRule(Tag newTbl, int newlkpType, GNode *targ, GNode *repl) {
     int accumDFLTLkps = 1;
 
@@ -1346,10 +1746,10 @@ void FeatCtx::prepRule(Tag newTbl, int newlkpType, GNode *targ, GNode *repl) {
         /* We're now poised at the start of the first rule of this feature.  */
         /* Start registering rules under the first language system (register */
         /* under the rest of the language systems at end of feature).        */
-        auto fls = langSysSet.cbegin();
-        assert ( fls !=langSysSet.cend() );
-        tagAssign(fls->script, scriptTag, false);
-        tagAssign(fls->lang, languageTag, false);
+        auto fls = langSysMap.cbegin();
+        assert ( fls !=langSysMap.cend() );
+        tagAssign(fls->first.script, scriptTag, false);
+        tagAssign(fls->first.lang, languageTag, false);
     }
 
     /* Set the label */
@@ -1892,80 +2292,455 @@ void FeatCtx::wrapUpRule() {
     endOfNamedLkpOrRef = false;
 }
 
+/* Add mark class reference to current anchorMarkInfo for the rule. */
+void FeatCtx::addMarkClass(const std::string &markClassName) {
+    if ( !openAsCurrentGC(markClassName) ) {
+        featMsg(hotERROR, "MarkToBase or MarkToMark rule references a mark class (%s) that has not yet been defined", markClassName.c_str());
+        return;
+    }
+    curGCHead->flags |= FEAT_USED_MARK_CLASS;
+    anchorMarkInfo.back().markClass = curGCHead;
+    finishCurrentGC();
+}
+
+void FeatCtx::addGPOS(int lkpType, GNode *targ, int anchorCount, const AnchorMarkInfo *ami) {
+    prepRule(GPOS_, (targ->flags & FEAT_HAS_MARKED) ? GPOSChain : lkpType, targ, NULL);
+
+    char *locDesc;
+    current_visitor->tokenPositionMsg(&locDesc);
+    GPOSRuleAdd(g, lkpType, targ, locDesc, anchorCount, ami);
+    MEM_FREE(g, locDesc);
+
+    wrapUpRule();
+}
+
+/* Analyze featValidateGPOSChain targ metrics. Return 1 if valid, else 0 */
+/* Also sets flags in backtrack and look-ahead sequences */
+
+bool FeatCtx::validateGPOSChain(GNode *targ, int lkpType) {
+    int state;
+    GNode *p;
+    int nMarked = 0;
+    int nNodesWithMetrics = 0;
+    bool seenTerminalMetrics = false; /* special case for kern -like syntax in a contextual sub statement. */
+    int nBaseGlyphs = 0;
+    int nLookupRefs = 0;
+    GNode *m = NULL;        /* Suppress optimizer warning */
+    GNode *lastNode = NULL; /* Suppress optimizer warning */
+
+    /* At most one run of marked positions supported, for now */
+    for (p = targ; p != NULL; p = p->nextSeq) {
+        lastNode = p;
+
+        if (p->flags & FEAT_MARKED) {
+            if (++nMarked == 1) {
+                m = p;
+            }
+            if (p->metricsInfo.cnt != -1) {
+                nNodesWithMetrics++;
+            }
+            if (p->lookupLabelCount > 0) {
+                nLookupRefs++;
+            }
+        } else {
+            if (p->lookupLabelCount > 0) {
+                featMsg(hotERROR, "Lookup references are allowed only in the input sequence: this is the sequence of marked glyphs.");
+            }
+
+            if (p->flags & FEAT_IS_MARK_NODE) {
+                featMsg(hotERROR, "The final mark class must be marked as part of the input sequence: this is the sequence of marked glyphs.");
+            }
+
+            if ((p->nextSeq != NULL) && (p->nextSeq->flags & FEAT_MARKED) && (nMarked > 0)) {
+                featMsg(hotERROR, "Unsupported contextual GPOS target sequence: only one run of marked glyphs  is supported.");
+                return false;
+            }
+
+            /* We actually do allow  a value records after the last glyph node, if there is only one marked glyph */
+            if (p->metricsInfo.cnt != -1) {
+                if (nMarked == 0) {
+                    featMsg(hotERROR, "Positioning cannot be applied in the backtrack glyph sequence, before the marked glyph sequence.");
+                    return false;
+                }
+                if ((p->nextSeq != NULL) || (nMarked > 1)) {
+                    featMsg(hotERROR, "Positioning values are allowed only in the marked glyph sequence, or after the final glyph node when only one glyph node is marked.");
+                    return false;
+                }
+
+                if ((p->nextSeq == NULL) && (nMarked == 1)) {
+                    seenTerminalMetrics = true;
+                }
+
+                nNodesWithMetrics++;
+            }
+        }
+
+        if (p->flags & FEAT_IS_BASE_NODE) {
+            nBaseGlyphs++;
+            if ((lkpType == GPOSCursive) && (!(p->flags & FEAT_MARKED))) {
+                featMsg(hotERROR, "The base glyph or glyph class must be marked as part of the input sequence in a contextual pos cursive statement.");
+            }
+        }
+    }
+
+    /* m now points to beginning of marked run */
+
+    /* Check for special case of a single marked node, with one or more lookahead nodes, and a single value record attached to the last node */
+    if (seenTerminalMetrics) {
+        m->metricsInfo = lastNode->metricsInfo;
+        lastNode->metricsInfo = METRICSINFOEMPTY;
+    }
+
+    if (targ->flags & FEAT_IGNORE_CLAUSE) {
+        /* An ignore clause is always contextual. If not marked, then mark the first glyph in the sequence */
+        if (nMarked == 0) {
+            targ->flags |= FEAT_MARKED;
+            nMarked = 1;
+        }
+    } else if ((nNodesWithMetrics == 0) && (nBaseGlyphs == 0) && (nLookupRefs == 0)) {
+        featMsg(hotERROR, "Contextual positioning rule must specify a positioning value or a mark attachment rule or a direct lookup reference.");
+        return false;
+    }
+
+    /* Divide into backtrack, input, and lookahead (xxx ff interface?). */
+    /* For now, input is marked glyphs                                  */
+    state = FEAT_BACKTRACK;
+    for (p = targ; p != NULL; p = p->nextSeq) {
+        if (p->flags & FEAT_MARKED) {
+            state = FEAT_INPUT;
+        } else if (state != FEAT_BACKTRACK) {
+            state = FEAT_LOOKAHEAD;
+        }
+        p->flags |= state;
+    }
+
+    return true;
+}
+
+/* ----------- ----------- -------------------------
+   Targ        Metrics     Lookup type
+   ----------- ----------- -------------------------
+   g           m m m m     Single                   g: single glyph
+   c           m m m m     Single (range)           c: glyph class (2 or more)
+                                                    x: g or c
+   g g         m           Pair (specific)
+   g c         m           Pair (class)
+   c g         m           Pair (class)
+   c c         m           Pair (class)
+
+   x x' x x'   m m         Chain ctx (not supported)
+   ----------- ----------- -------------------------
+
+   Add a pos rule from the feature file.
+    Can assume targ is at least one node. If h->metrics.cnt == 0
+   then targ is an "ignore position" pattern. */
+
+void FeatCtx::addBaseClass(GNode *targ, const std::string &defaultClassName) {
+    /* Find base node in a possibly contextual sequence, */
+    /* and add it to the default base glyph class        */
+    GNode *nextNode = targ;
+
+    /* If it is contextual, first find the base glyph */
+    if (targ->flags & FEAT_HAS_MARKED) {
+        while (nextNode != NULL) {
+            if (nextNode->flags & FEAT_IS_BASE_NODE) {
+                break;
+            }
+            nextNode = nextNode->nextSeq;
+        }
+    }
+
+    if (nextNode->flags & FEAT_IS_BASE_NODE) {
+        openAsCurrentGC(defaultClassName);
+        if (nextNode->nextCl != NULL) {
+            addGlyphClassToCurrentGC(nextNode);
+        } else {
+            addGlyphToCurrentGC(nextNode->gid);
+        }
+        finishCurrentGC();
+    }
+}
+
+void FeatCtx::addPos(GNode *targ, int type, bool enumerate) {
+    int glyphCount = 0;
+    int markedCount = 0;
+    int lookupLabelCnt = 0;
+    GNode *next_targ = NULL;
+    GNode *copyHeadNode;
+
+    if (enumerate) {
+        targ->flags |= FEAT_ENUMERATE;
+    }
+
+    /* count glyphs, figure out if is single, pair, or context. */
+    next_targ = targ;
+    while (next_targ != NULL) {
+        glyphCount++;
+        if (next_targ->flags & FEAT_MARKED) {
+            markedCount++;
+        }
+        if (next_targ->lookupLabelCount > 0) {
+            lookupLabelCnt++;
+            if (!(next_targ->flags & FEAT_MARKED)) {
+                featMsg(hotERROR, "the glyph which precedes the 'lookup' keyword must be marked as part of the contextual input sequence");
+            }
+        }
+        next_targ = next_targ->nextSeq;
+    }
+
+    /* The ignore statement can only be used with contextual lookups. */
+    /* If no glyph is marked, then mark the first.                    */
+    if (targ->flags & FEAT_IGNORE_CLAUSE) {
+        type = GPOSChain;
+        if (markedCount == 0) {
+            markedCount = 1;
+            targ->flags |= FEAT_MARKED;
+        }
+    }
+
+    if (markedCount > 0) {
+        targ->flags |= FEAT_HAS_MARKED; /* used later to decide if stuff is contextual */
+    }
+    if ((glyphCount == 2) && (markedCount == 0) && (type == GPOSSingle)) {
+        type = GPOSPair;
+    } else if (enumerate) {
+        featMsg(hotERROR, "\"enumerate\" only allowed with pair positioning,");
+    }
+
+    if (type == GPOSSingle) {
+        addGPOS(GPOSSingle, targ, anchorMarkInfo.size(), anchorMarkInfo.data());
+        /* These nodes are recycled in GPOS.c */
+    } else if (type == GPOSPair) {
+        next_targ = targ->nextSeq;
+        if (targ->nextCl != NULL) {
+            /* In order to sort and remove duplicates, I need to copy the   */
+            /* original class definition. This is because class definitions */
+            /* may be used for sequences as well as real classes, and       */
+            /* sorting and removing duplicates from the original class is a */
+            /* bad idea.                                                    */
+            copyGlyphClass(&copyHeadNode, targ);
+            targ = copyHeadNode;
+            sortGlyphClass(&targ, true, true);
+            targ->nextSeq = next_targ; /* featGlyphClassCopy zeros the  nextSeq field in all nodes.*/
+        }
+        if (next_targ->nextCl != NULL) {
+            /* In order to sort and remove duplicates, I need to copy the    */
+            /* original class definition. This is because class definitions  */
+            /* may be used for sequences as well as real classes, and        */
+            /* sorting and removing duplicates from the original class is a  */
+            /* bad idea. */
+            copyGlyphClass(&copyHeadNode, next_targ);
+            next_targ = copyHeadNode;
+            sortGlyphClass(&next_targ, true, true);
+            targ->nextSeq = next_targ; /* featGlyphClassSort may change which node in the next_targ class is the head node.  */
+        }
+        /* addGPOSPair(targ, second, enumerate); */
+        addGPOS(GPOSPair, targ, anchorMarkInfo.size(), anchorMarkInfo.data());
+        /* These nodes are recycled in GPOS.c due to some complicated copying of nodes. */
+    } else if (type == GPOSCursive) {
+        if (anchorMarkInfo.size() != 2) {
+            featMsg(hotERROR, "The 'cursive' statement requires two anchors. This has %ld. Skipping rule.", anchorMarkInfo.size());
+        } else if ((!(targ->flags & FEAT_HAS_MARKED)) && ((!(targ->flags & FEAT_IS_BASE_NODE)) || (targ->nextSeq != NULL))) {
+            featMsg(hotERROR, "This statement has contextual glyphs around the cursive statement, but no glyphs are marked as part of the input sequence. Skipping rule.");
+        } else {
+            addGPOS(GPOSCursive, targ, anchorMarkInfo.size(), anchorMarkInfo.data());
+        }
+        /* These nodes are recycled in GPOS.c */
+    } else if (type == GPOSMarkToBase) {
+        addBaseClass(targ, kDEFAULT_BASECLASS_NAME);
+        if ((!(targ->flags & FEAT_HAS_MARKED)) && ((!(targ->flags & FEAT_IS_BASE_NODE)) || ((targ->nextSeq != NULL) && (targ->nextSeq->nextSeq != NULL)))) {
+            featMsg(hotERROR, "This statement has contextual glyphs around the base-to-mark statement, but no glyphs are marked as part of the input sequence. Skipping rule.");
+        }
+        addGPOS(GPOSMarkToBase, targ, anchorMarkInfo.size(), anchorMarkInfo.data());
+        /* These nodes are recycled in GPOS.c */
+    } else if (type == GPOSMarkToLigature) {
+        addBaseClass(targ, kDEFAULT_LIGATURECLASS_NAME);
+        if ((!(targ->flags & FEAT_HAS_MARKED)) && ((!(targ->flags & FEAT_IS_BASE_NODE)) || ((targ->nextSeq != NULL) && (targ->nextSeq->nextSeq != NULL)))) {
+            featMsg(hotERROR, "This statement has contextual glyphs around the ligature statement, but no glyphs are marked as part of the input sequence. Skipping rule.");
+        }
+
+        /* With mark to ligatures, we may see the same mark class on         */
+        /* different components, which leads to duplicate GID's in the       */
+        /* contextual mark node. As a result, we need to sort and get rid of */
+        /* duplicates.                                                       */
+
+        if (targ->flags & FEAT_HAS_MARKED) {
+            /* find the mark node */
+            GNode *markClassNode = targ;
+            GNode *prevNode = NULL;
+
+            while (markClassNode != NULL) {
+                if (markClassNode->flags & FEAT_IS_MARK_NODE) {
+                    break;
+                }
+                prevNode = markClassNode;
+                markClassNode = markClassNode->nextSeq;
+            }
+            if ((markClassNode != NULL) && (markClassNode->flags & FEAT_IS_MARK_NODE)) {
+                copyGlyphClass(&copyHeadNode, markClassNode);
+                markClassNode = copyHeadNode;
+                sortGlyphClass(&markClassNode, true, false); /* changes value of markClassNode. I specify to NOT warn of duplicates, because they can happen with correct syntax. */
+                prevNode->nextSeq = markClassNode;
+            }
+        }
+
+        addGPOS(GPOSMarkToLigature, targ, anchorMarkInfo.size(), anchorMarkInfo.data());
+        /* These nodes are recycled in GPOS.c */
+    } else if (type == GPOSMarkToMark) {
+        addBaseClass(targ, kDEFAULT_MARKCLASS_NAME);
+        if ((!(targ->flags & FEAT_HAS_MARKED)) && ((!(targ->flags & FEAT_IS_BASE_NODE)) || ((targ->nextSeq != NULL) && (targ->nextSeq->nextSeq != NULL)))) {
+            featMsg(hotERROR, "This statement has contextual glyphs around the mark-to-mark statement, but no glyphs are marked as part of the input sequence. Skipping rule.");
+        }
+        addGPOS(GPOSMarkToMark, targ, anchorMarkInfo.size(), anchorMarkInfo.data());
+        /* These nodes are recycled in GPOS.c */
+    } else if (type == GPOSChain) {
+        /* is contextual */
+        if (markedCount == 0) {
+            featMsg(hotERROR, "The 'lookup' keyword can be used only in a contextual statement. At least one glyph in the sequence must be marked. Skipping rule.");
+        } else {
+            validateGPOSChain(targ, type);
+            addGPOS(GPOSChain, targ, anchorMarkInfo.size(), anchorMarkInfo.data());
+        }
+        /* These nodes are recycled in GPOS.c, as they are used in the fill phase, some time after this function returns. */
+    } else {
+        featMsg(hotERROR, "This rule type is not recognized..");
+    }
+}
+
+void FeatCtx::clearCVParameters() {
+    sawCVParams = true;
+    cvParameters.FeatUILabelNameID = 0;
+    cvParameters.FeatUITooltipTextNameID = 0;
+    cvParameters.SampleTextNameID = 0;
+    cvParameters.NumNamedParameters = 0;
+    cvParameters.FirstParamUILabelNameID = 0;
+    cvParameters.charValues.cnt = 0;
+}
+
+void FeatCtx::addCVNameID(int labelID) {
+    switch (labelID) {
+        case cvUILabelEnum: {
+            if (cvParameters.FeatUILabelNameID != 0) {
+                featMsg(hotERROR, "A Character Variant parameter table can have only one FeatUILabelNameID entry.");
+            }
+            cvParameters.FeatUILabelNameID = featNameID;
+            break;
+        }
+
+        case cvToolTipEnum: {
+            if (cvParameters.FeatUITooltipTextNameID != 0) {
+                featMsg(hotERROR, "A Character Variant parameter table can have only one SampleTextNameID entry.");
+            }
+            cvParameters.FeatUITooltipTextNameID = featNameID;
+            break;
+        }
+
+        case cvSampleTextEnum: {
+            if (cvParameters.SampleTextNameID != 0) {
+                featMsg(hotERROR, "A Character Variant parameter table can have only one SampleTextNameID entry.");
+            }
+            cvParameters.SampleTextNameID = featNameID;
+            break;
+        }
+
+        case kCVParameterLabelEnum: {
+            cvParameters.NumNamedParameters++;
+            cvParameters.FirstParamUILabelNameID = featNameID;
+            break;
+        }
+    }
+
+    featNameID = 0;
+}
+
+void FeatCtx::addCVParametersCharValue(unsigned long uv) {
+    unsigned long *uvp = dnaNEXT(cvParameters.charValues);
+    *uvp = uv;
+}
+
+void FeatCtx::addCVParam() {
+    prepRule(GSUB_, GSUBCVParam, NULL, NULL);
+
+    GSUBAddCVParam(g, &cvParameters);
+
+    wrapUpRule();
+}
+
+
 /* Add Unicode and CodePage ranges to  OS/2 table. */
 /* ------------------------------------------------------------------- */
 /* ------------------------------------------------------------------- */
 #define SET_BIT_ARR(a, b) (a[(b) / 32] |= 1UL << (b) % 32)
 
 const short kValidCodePageNumbers[kLenCodePageList] = {
-    1252,           /*  bit 0  Latin 1 */
-    1250,           /*  bit 1  Latin 2: Eastern Europe */
-    1251,           /*  bit 2  Cyrillic */
-    1253,           /*  bit 3  Greek */
-    1254,           /*  bit 4  Turkish */
-    1255,           /*  bit 5  Hebrew */
-    1256,           /*  bit 6  Arabic */
-    1257,           /*  bit 7  Windows Baltic */
-    1258,           /*  bit 8  Vietnamese */
-    kCodePageUnSet, /*  bit 9  Reserved for Alternate ANSI */
-    kCodePageUnSet, /*  bit 10  Reserved for Alternate ANSI */
-    kCodePageUnSet, /*  bit 11  Reserved for Alternate ANSI */
-    kCodePageUnSet, /*  bit 12  Reserved for Alternate ANSI */
-    kCodePageUnSet, /*  bit 13  Reserved for Alternate ANSI */
-    kCodePageUnSet, /*  bit 14 Reserved for Alternate ANSI */
-    kCodePageUnSet, /*  bit 15  Reserved for Alternate ANSI */
-    874,            /*  bit 16  Thai */
-    932,            /*  bit 17  JIS/Japan */
-    936,            /*  bit 18  Chinese: Simplified chars--PRC and Singapore */
-    949,            /*  bit 19  Korean Wansung */
-    950,            /*  bit 20  Chinese: Traditional chars--Taiwan and Hong Kong */
-    1361,           /*  bit 21  Korean Johab */
-    kCodePageUnSet, /*  bit 22-28  Reserved for Alternate ANSI & OEM */
-    kCodePageUnSet, /*  bit 23  Reserved for Alternate ANSI & OEM */
-    kCodePageUnSet, /*  bit 24  Reserved for Alternate ANSI & OEM */
-    kCodePageUnSet, /*  bit 25  Reserved for Alternate ANSI & OEM */
-    kCodePageUnSet, /*  bit 26  Reserved for Alternate ANSI & OEM */
-    kCodePageUnSet, /*  bit 27  Reserved for Alternate ANSI & OEM */
-    kCodePageUnSet, /*  bit 28  Reserved for Alternate ANSI & OEM */
-    kCodePageUnSet, /*  bit 29  Macintosh Character Set (US Roman) */
-    kCodePageUnSet, /*  bit 30  OEM Character Set */
-    kCodePageUnSet, /*  bit 31  Symbol Character Set */
-    kCodePageUnSet, /*  bit 32  Reserved for OEM */
-    kCodePageUnSet, /*  bit 33  Reserved for OEM */
-    kCodePageUnSet, /*  bit 34  Reserved for OEM */
-    kCodePageUnSet, /*  bit 35  Reserved for OEM */
-    kCodePageUnSet, /*  bit 36  Reserved for OEM */
-    kCodePageUnSet, /*  bit 37  Reserved for OEM */
-    kCodePageUnSet, /*  bit 38  Reserved for OEM */
-    kCodePageUnSet, /*  bit 39  Reserved for OEM */
-    kCodePageUnSet, /*  bit 40  Reserved for OEM */
-    kCodePageUnSet, /*  bit 41  Reserved for OEM */
-    kCodePageUnSet, /*  bit 42  Reserved for OEM */
-    kCodePageUnSet, /*  bit 43  Reserved for OEM */
-    kCodePageUnSet, /*  bit 44  Reserved for OEM */
-    kCodePageUnSet, /*  bit 45  Reserved for OEM */
-    kCodePageUnSet, /*  bit 46  Reserved for OEM */
-    kCodePageUnSet, /*  bit 47  Reserved for OEM */
-    869,            /*  bit 48  IBM Greek */
-    866,            /*  bit 49  MS-DOS Russian */
-    865,            /*  bit 50  MS-DOS Nordic */
-    864,            /*  bit 51  Arabic */
-    863,            /*  bit 52  MS-DOS Canadian French */
-    862,            /*  bit 53  Hebrew */
-    861,            /*  bit 54  MS-DOS Icelandic */
-    860,            /*  bit 55  MS-DOS Portuguese */
-    857,            /*  bit 56  IBM Turkish */
-    855,            /*  bit 57  IBM Cyrillic; primarily Russian */
-    852,            /*  bit 58  Latin 2 */
-    775,            /*  bit 59  MS-DOS Baltic */
-    737,            /*  bit 60  Greek; former 437 G */
-    708,            /*  bit 61  Arabic; ASMO 708 */
-    850,            /*  bit 62  WE/Latin 1 */
-    437,            /*  bit 63  US */
+    1252,                    /*  bit 0  Latin 1 */
+    1250,                    /*  bit 1  Latin 2: Eastern Europe */
+    1251,                    /*  bit 2  Cyrillic */
+    1253,                    /*  bit 3  Greek */
+    1254,                    /*  bit 4  Turkish */
+    1255,                    /*  bit 5  Hebrew */
+    1256,                    /*  bit 6  Arabic */
+    1257,                    /*  bit 7  Windows Baltic */
+    1258,                    /*  bit 8  Vietnamese */
+    FeatCtx::kCodePageUnSet, /*  bit 9  Reserved for Alternate ANSI */
+    FeatCtx::kCodePageUnSet, /*  bit 10  Reserved for Alternate ANSI */
+    FeatCtx::kCodePageUnSet, /*  bit 11  Reserved for Alternate ANSI */
+    FeatCtx::kCodePageUnSet, /*  bit 12  Reserved for Alternate ANSI */
+    FeatCtx::kCodePageUnSet, /*  bit 13  Reserved for Alternate ANSI */
+    FeatCtx::kCodePageUnSet, /*  bit 14 Reserved for Alternate ANSI */
+    FeatCtx::kCodePageUnSet, /*  bit 15  Reserved for Alternate ANSI */
+    874,                     /*  bit 16  Thai */
+    932,                     /*  bit 17  JIS/Japan */
+    936,                     /*  bit 18  Chinese: Simplified chars--PRC and Singapore */
+    949,                     /*  bit 19  Korean Wansung */
+    950,                     /*  bit 20  Chinese: Traditional chars--Taiwan and Hong Kong */
+    1361,                    /*  bit 21  Korean Johab */
+    FeatCtx::kCodePageUnSet, /*  bit 22-28  Reserved for Alternate ANSI & OEM */
+    FeatCtx::kCodePageUnSet, /*  bit 23  Reserved for Alternate ANSI & OEM */
+    FeatCtx::kCodePageUnSet, /*  bit 24  Reserved for Alternate ANSI & OEM */
+    FeatCtx::kCodePageUnSet, /*  bit 25  Reserved for Alternate ANSI & OEM */
+    FeatCtx::kCodePageUnSet, /*  bit 26  Reserved for Alternate ANSI & OEM */
+    FeatCtx::kCodePageUnSet, /*  bit 27  Reserved for Alternate ANSI & OEM */
+    FeatCtx::kCodePageUnSet, /*  bit 28  Reserved for Alternate ANSI & OEM */
+    FeatCtx::kCodePageUnSet, /*  bit 29  Macintosh Character Set (US Roman) */
+    FeatCtx::kCodePageUnSet, /*  bit 30  OEM Character Set */
+    FeatCtx::kCodePageUnSet, /*  bit 31  Symbol Character Set */
+    FeatCtx::kCodePageUnSet, /*  bit 32  Reserved for OEM */
+    FeatCtx::kCodePageUnSet, /*  bit 33  Reserved for OEM */
+    FeatCtx::kCodePageUnSet, /*  bit 34  Reserved for OEM */
+    FeatCtx::kCodePageUnSet, /*  bit 35  Reserved for OEM */
+    FeatCtx::kCodePageUnSet, /*  bit 36  Reserved for OEM */
+    FeatCtx::kCodePageUnSet, /*  bit 37  Reserved for OEM */
+    FeatCtx::kCodePageUnSet, /*  bit 38  Reserved for OEM */
+    FeatCtx::kCodePageUnSet, /*  bit 39  Reserved for OEM */
+    FeatCtx::kCodePageUnSet, /*  bit 40  Reserved for OEM */
+    FeatCtx::kCodePageUnSet, /*  bit 41  Reserved for OEM */
+    FeatCtx::kCodePageUnSet, /*  bit 42  Reserved for OEM */
+    FeatCtx::kCodePageUnSet, /*  bit 43  Reserved for OEM */
+    FeatCtx::kCodePageUnSet, /*  bit 44  Reserved for OEM */
+    FeatCtx::kCodePageUnSet, /*  bit 45  Reserved for OEM */
+    FeatCtx::kCodePageUnSet, /*  bit 46  Reserved for OEM */
+    FeatCtx::kCodePageUnSet, /*  bit 47  Reserved for OEM */
+    869,                     /*  bit 48  IBM Greek */
+    866,                     /*  bit 49  MS-DOS Russian */
+    865,                     /*  bit 50  MS-DOS Nordic */
+    864,                     /*  bit 51  Arabic */
+    863,                     /*  bit 52  MS-DOS Canadian French */
+    862,                     /*  bit 53  Hebrew */
+    861,                     /*  bit 54  MS-DOS Icelandic */
+    860,                     /*  bit 55  MS-DOS Portuguese */
+    857,                     /*  bit 56  IBM Turkish */
+    855,                     /*  bit 57  IBM Cyrillic; primarily Russian */
+    852,                     /*  bit 58  Latin 2 */
+    775,                     /*  bit 59  MS-DOS Baltic */
+    737,                     /*  bit 60  Greek; former 437 G */
+    708,                     /*  bit 61  Arabic; ASMO 708 */
+    850,                     /*  bit 62  WE/Latin 1 */
+    437,                     /*  bit 63  US */
 };
 
 static int validateCodePage(short pageNum) {
-    int validPageBitIndex = kCodePageUnSet;
+    int validPageBitIndex = FeatCtx::kCodePageUnSet;
 
     for (int i = 0; i < kLenCodePageList; i++) {
         if (pageNum == kValidCodePageNumbers[i]) {
@@ -2215,14 +2990,16 @@ void FeatCtx::aaltCreate() {
     }
 
     /* Add default lang sys if none specified */
-    if (langSysSet.size() == 0) {
+    if (langSysMap.size() == 0) {
         addLangSys(DFLT_, dflt_, false);
         if (fFlags & langSysMode) {
             hotMsg(g, hotWARNING, "[internal] aalt language system unspecified");
         }
     }
 
-    GSUBFeatureBegin(g, langSysSet.begin()->script, langSysSet.begin()->lang, aalt_);
+    auto i = langSysMap.cbegin();
+    assert( i != langSysMap.cend() );
+    GSUBFeatureBegin(g, i->first.script, i->first.lang, aalt_);
 
     /* --- Feed in single subs --- */
     if (sortTmp.begin() != single_end) {
@@ -2249,11 +3026,11 @@ void FeatCtx::aaltCreate() {
     GSUBFeatureEnd(g);
 
     /* Also register these lookups under any other lang systems, if needed: */
-    for (auto ls = langSysSet.begin(); ls != langSysSet.end(); ls++) {
-        if ( ls == langSysSet.begin() )
+    for (auto ls = langSysMap.cbegin(); ls != langSysMap.cend(); ls++) {
+        if ( ls == langSysMap.cbegin() )
             continue;
 
-        GSUBFeatureBegin(g, ls->script, ls->lang, aalt_);
+        GSUBFeatureBegin(g, ls->first.script, ls->first.lang, aalt_);
 
         if (sortTmp.begin() != single_end) {
             GSUBLookupBegin(g, GSUBSingle, 0, (Label)(labelSingle | REF_LAB),
@@ -2324,6 +3101,56 @@ void FeatCtx::storeRuleInfo(GNode *targ, GNode *repl) {
     }
 }
 
+/* Creates the cross product of pattern pat, and returns the array of *n
+ * resulting sequences. pat is left intact; the client is responsible for
+   recycling the result. */
+
+GNode **FeatCtx::makeCrossProduct(GNode *pat, unsigned *n) {
+    GNode *cl;
+
+    prod.clear();
+
+    /* Add each glyph class in pat to the cross product */
+    for (cl = pat; cl != NULL; cl = cl->nextSeq) {
+        long i;
+        long nProd;
+
+        if (cl == pat)
+            prod.push_back(nullptr);
+
+        nProd = prod.size();
+
+        for (i = 0; i < nProd; i++) {
+            GNode *p;
+            int cntCl = 0;
+            int lenSrc = 0;
+
+            /* h->prod.array[i] is the source. Don't store its address as a */
+            /* pointer in a local variable since dnaINDEX below may         */
+            /* obsolete it!                                                 */
+            for (p = cl; p != NULL; p = p->nextCl) {
+                GNode **r;
+
+                if (p == cl) {
+                    for (r = &prod[i]; *r != NULL; r = &(*r)->nextSeq) {
+                        lenSrc++;
+                    }
+                } else {
+                    size_t inxTarg = nProd * cntCl + i;
+                    if ( inxTarg >= prod.size() )
+                        prod.resize(inxTarg+1);
+
+                    r = copyPattern(&prod[inxTarg], prod[i], lenSrc);
+                }
+                *r = setNewNode(p->gid);
+                cntCl++;
+            }
+        }
+    }
+
+    *n = prod.size();
+    return prod.data();
+}
 
 inline FeatCtx *hctofc(hotCtx g) {
     assert( g->ctx.feat != nullptr );
@@ -2400,7 +3227,7 @@ void featMsgPrefix(hotCtx g, char **premsg, char **prefix) {
     hctofc(g)->msgPrefix(premsg, prefix);
 }
 
-GNode ***featMakeCrossProduct(hotCtx g, GNode *pat, unsigned *n) {
+GNode **featMakeCrossProduct(hotCtx g, GNode *pat, unsigned *n) {
     return hctofc(g)->makeCrossProduct(pat, n);
 }
 

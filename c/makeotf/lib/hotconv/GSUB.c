@@ -127,7 +127,6 @@ static void fillSingle(hotCtx g, GSUBCtx h);
 static void writeSingle(hotCtx g, GSUBCtx h, Subtable *sub);
 static void freeSingle(hotCtx g, GSUBCtx h, Subtable *sub);
 
-#if HOT_FEAT_SUPPORT
 static void fillMultiple(hotCtx g, GSUBCtx h);
 static void writeMultiple(hotCtx g, GSUBCtx h, Subtable *sub);
 static void freeMultiple(hotCtx g, GSUBCtx h, Subtable *sub);
@@ -150,8 +149,6 @@ static void freeReverseChain(hotCtx g, GSUBCtx h, Subtable *sub);
 
 static void createAnonLookups(hotCtx g, GSUBCtx h);
 static void setAnonLookupIndices(hotCtx g, GSUBCtx h);
-
-#endif /* HOT_FEAT_SUPPORT */
 
 static ExtensionSubstFormat1 *fillExtension(hotCtx g, GSUBCtx h,
                                             unsigned ExtensionLookupType);
@@ -218,9 +215,7 @@ int GSUBFill(hotCtx g) {
         }
     }
 
-#if HOT_FEAT_SUPPORT
     createAnonLookups(g, h);
-#endif /* HOT_FEAT_SUPPORT */
 
     /* Add OTL features */
 
@@ -282,7 +277,6 @@ int GSUBFill(hotCtx g) {
     otlDumpSizes(g, h->otl, h->offset.subtable, h->offset.extension);
 #endif /* HOT_DEBUG */
 
-#if HOT_FEAT_SUPPORT
     /* setAnonLookupIndices marks as used not only the anonymous lookups, */
     /* but also all lookups that were referenced from chain sub rules,    */
     /* including the stand-alone lookups. This is why                     */
@@ -290,7 +284,6 @@ int GSUBFill(hotCtx g) {
     setAnonLookupIndices(g, h);
 
     checkStandAloneTablRefs(g, h->otl);
-#endif /* HOT_FEAT_SUPPORT */
 
     OS_2SetMaxContext(g, h->maxContext);
 
@@ -356,7 +349,6 @@ void GSUBWrite(hotCtx g) {
                 writeSingle(g, h, sub);
                 break;
 
-#if HOT_FEAT_SUPPORT
             case GSUBMultiple:
                 writeMultiple(g, h, sub);
                 break;
@@ -384,7 +376,6 @@ void GSUBWrite(hotCtx g) {
             case GSUBContext:
                 break;
             */
-#endif /* HOT_FEAT_SUPPORT */
         }
     }
 
@@ -406,7 +397,6 @@ void GSUBWrite(hotCtx g) {
                 writeSingle(g, h, sub);
                 break;
 
-#if HOT_FEAT_SUPPORT
             case GSUBMultiple:
                 writeMultiple(g, h, sub);
                 break;
@@ -431,7 +421,6 @@ void GSUBWrite(hotCtx g) {
             case GSUBContext:
                 break;
             */
-#endif /* HOT_FEAT_SUPPORT */
         }
     }
 }
@@ -458,7 +447,6 @@ void GSUBReuse(hotCtx g) {
                 freeSingle(g, h, sub);
                 break;
 
-#if HOT_FEAT_SUPPORT
             case GSUBMultiple:
                 freeMultiple(g, h, sub);
                 break;
@@ -491,7 +479,6 @@ void GSUBReuse(hotCtx g) {
             case GSUBContext:
                 break;
             */
-#endif /* HOT_FEAT_SUPPORT */
         }
     }
 
@@ -655,7 +642,6 @@ static void addRule(hotCtx g, GSUBCtx h, SubtableInfo *si, GNode *targ,
         }
         return;
     }
-#if HOT_FEAT_SUPPORT
     else if (si->lkpType == GSUBLigature) {
         GNode *t;
         unsigned length = featGetPatternLen(g, targ);
@@ -669,12 +655,12 @@ static void addRule(hotCtx g, GSUBCtx h, SubtableInfo *si, GNode *targ,
         if (t != NULL) {
             unsigned i;
             unsigned nSeq;
-            GNode ***prod = featMakeCrossProduct(g, targ, &nSeq);
+            GNode **prod = featMakeCrossProduct(g, targ, &nSeq);
 
             featRecycleNodes(g, targ);
             for (i = 0; i < nSeq; i++) {
                 rule = dnaNEXT(si->rules);
-                rule->targ = (*prod)[i];
+                rule->targ = prod[i];
                 rule->repl = i == 0 ? repl : featSetNewNode(g, repl->gid);
                 rule->data = length;
 #if HOT_DEBUG
@@ -697,7 +683,6 @@ static void addRule(hotCtx g, GSUBCtx h, SubtableInfo *si, GNode *targ,
         rule->targ = targ;
         rule->repl = repl;
     }
-#endif /* HOT_FEAT_SUPPORT */
 }
 
 /* Stores input GNodes; they are recycled at GSUBLookupEnd. */
@@ -749,7 +734,6 @@ void GSUBLookupEnd(hotCtx g, Tag feature) {
             fillSingle(g, h);
             break;
 
-#if HOT_FEAT_SUPPORT
         case GSUBMultiple:
             fillMultiple(g, h);
             break;
@@ -778,7 +762,6 @@ void GSUBLookupEnd(hotCtx g, Tag feature) {
             fillGSUBCVParam(g, h, h->new.sub);
             break;
 
-#endif /* HOT_FEAT_SUPPORT */
         default:
             /* Can't get here, but it is a useful check for future development. */
             hotMsg(g, hotFATAL, "unknown GSUB lkpType <%d> in %s.", h->new.lkpType, g->error_id_text);
@@ -1238,7 +1221,6 @@ static void freeSingle(hotCtx g, GSUBCtx h, Subtable *sub) {
     }
 }
 
-#if HOT_FEAT_SUPPORT
 
 /* ------------------------- Multiple Substitution ------------------------- */
 
@@ -2194,10 +2176,10 @@ static int addToAnonSubtbl(hotCtx g, GSUBCtx h, SubtableInfo *si, GNode *targ,
     } else if (si->lkpType == GSUBLigature) {
         unsigned i;
         unsigned nSeq;
-        GNode ***prod = featMakeCrossProduct(g, targ, &nSeq);
+        GNode **prod = featMakeCrossProduct(g, targ, &nSeq);
 
         dnaSET_CNT(h->prod, (long)nSeq);
-        COPY(&h->prod.array[0], *prod, nSeq);
+        COPY(&h->prod.array[0], prod, nSeq);
 
         for (i = 0; i < nSeq; i++) {
             long j;
@@ -2707,8 +2689,6 @@ static void freeChain(hotCtx g, GSUBCtx h, Subtable *sub) {
     }
 }
 
-#endif /* HOT_FEAT_SUPPORT */
-
 static int CDECL cmpNode(const void *first, const void *second) {
     GID a = (*(GNode **)first)->gid;
     GID b = (*(GNode **)second)->gid;
@@ -3001,10 +2981,6 @@ static void freeExtension(hotCtx g, GSUBCtx h, Subtable *sub) {
 /* This function just serves to suppress annoying "defined but not used"
    compiler messages when debugging */
 static void CDECL dbuse(int arg, ...) {
-#if HOT_FEAT_SUPPORT
     dbuse(0, rulesDump , fillChain1, fillChain2, aaltDump);
-#else
-    dbuse(0, rulesDump);
-#endif /* HOT_FEAT_SUPPORT */
 }
 #endif

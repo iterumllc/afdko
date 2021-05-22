@@ -13,12 +13,34 @@ class  FeatLexer : public antlr4::Lexer {
 public:
   enum {
     ANON = 1, ANONV = 2, COMMENT = 3, WHITESPACE = 4, BY = 5, FROM = 6, 
-    FEATURE = 7, SUB = 8, SUBV = 9, REV = 10, REVV = 11, LANGSYS = 12, KNULL = 13, 
-    INCLUDE = 14, LCBRACE = 15, RCBRACE = 16, LBRACKET = 17, RBRACKET = 18, 
-    HYPHEN = 19, SEMI = 20, MARKER = 21, QUOTE = 22, GCLASS = 23, CID = 24, 
-    ESCGNAME = 25, NAMELABEL = 26, EXTNAME = 27, CATCHTAG = 28, A_WHITESPACE = 29, 
-    A_LABEL = 30, A_LBRACE = 31, A_CLOSE = 32, A_LINE = 33, I_WHITESPACE = 34, 
-    I_RPAREN = 35, IFILE = 36, I_LPAREN = 37, STRVAL = 38, EQUOTE = 39
+    FEATURE = 7, SUB = 8, SUBV = 9, EXCEPT = 10, ANCHORDEF = 11, ANCHOR = 12, 
+    CONTOURPOINT = 13, REV = 14, REVV = 15, MARKCLASS = 16, LANGSYS = 17, 
+    BASE = 18, TABLE = 19, SCRIPT = 20, LANG = 21, GDEF = 22, GCD = 23, 
+    ATTACH = 24, HEAD = 25, FONTREV = 26, HHEA = 27, CARETOFF = 28, ASCENDER = 29, 
+    DESCENDER = 30, LINEGAP = 31, VHEA = 32, VASCENDER = 33, VDESCENDER = 34, 
+    VLINEGAP = 35, VMTX = 36, VERTORIY = 37, VERTADVY = 38, NAME = 39, NAMEID = 40, 
+    LIGCARETPOS = 41, LIGCARETIDX = 42, STAT = 43, ELIDFALLNAME = 44, ELIDFALLNAMEID = 45, 
+    DESIGNAXIS = 46, AXISVALUE = 47, FLAG = 48, AXIS_OSFA = 49, AXIS_EAVN = 50, 
+    LOCATION = 51, OS_2 = 52, FSTYPE = 53, FSTYPE2 = 54, OS2_LOPS = 55, 
+    OS2_UOPS = 56, PANOSE = 57, TYPOASC = 58, TYPODESC = 59, TYPOLINEGAP = 60, 
+    WINASC = 61, WINDESC = 62, XHEIGHT = 63, CAPHEIGHT = 64, WEIGHTCLASS = 65, 
+    WIDTHCLASS = 66, VENDOR = 67, UNIRANGE = 68, CODEPAGERANGE = 69, FAMCLASS = 70, 
+    LOOKUP = 71, USEEXTENSION = 72, EXCLUDE_DFLT = 73, INCLUDE_DFLT = 74, 
+    EXCLUDE_dflt = 75, INCLUDE_dflt = 76, HA_BTL = 77, VA_BTL = 78, HA_BSL = 79, 
+    VA_BSL = 80, SUBTABLE = 81, LOOKUPFLAG = 82, VALUERECORDDEF = 83, BEGINVALUE = 84, 
+    ENDVALUE = 85, FEATNAMES = 86, RIGHTTOLEFT = 87, IGNOREBASEGLYPHS = 88, 
+    IGNORELIGATURES = 89, IGNOREMARKS = 90, MARKATTACHMENTTYPE = 91, USEMARKFILTERINGSET = 92, 
+    SIZEMENUNAME = 93, CVPARAMETERS = 94, CVUILABEL = 95, CVTOOLTIP = 96, 
+    CVSAMPLETEXT = 97, CVPARAMLABEL = 98, CVCHARACTER = 99, PARAMETERS = 100, 
+    IGNORE = 101, ENUM = 102, ENUMV = 103, POSITION = 104, POSITIONV = 105, 
+    CURSIVE = 106, MARKBASE = 107, MARKLIG = 108, MARKLIGV = 109, MARK = 110, 
+    LIGATURECOMPONENT = 111, KNULL = 112, INCLUDE = 113, LCBRACE = 114, 
+    RCBRACE = 115, LBRACKET = 116, RBRACKET = 117, HYPHEN = 118, SEMI = 119, 
+    EQUALS = 120, MARKER = 121, COMMA = 122, QUOTE = 123, GCLASS = 124, 
+    CID = 125, ESCGNAME = 126, NAMELABEL = 127, EXTNAME = 128, POINTNUM = 129, 
+    NUMEXT = 130, NUMOCT = 131, NUM = 132, CATCHTAG = 133, A_WHITESPACE = 134, 
+    A_LABEL = 135, A_LBRACE = 136, A_CLOSE = 137, A_LINE = 138, I_WHITESPACE = 139, 
+    I_RPAREN = 140, IFILE = 141, I_LPAREN = 142, STRVAL = 143, EQUOTE = 144
   };
 
   enum {
@@ -30,6 +52,18 @@ public:
 
 
    std::string anon_tag;
+   bool verify_anon(const std::string &line) {
+       auto p = line.find(anon_tag);
+       if ( p == std::string::npos )
+           return false;
+       --p;
+       if ( ! ( line[p] == ' ' || line[p] == '\t' || line[p] == '}' ) )
+           return false;
+       p += anon_tag.size() + 1;
+       if ( ! ( line[p] == ' ' || line[p] == '\t' || line[p] == ';' ) )
+           return false;
+       return true;
+   }
 
   virtual std::string getGrammarFileName() const override;
   virtual const std::vector<std::string>& getRuleNames() const override;

@@ -165,7 +165,7 @@ void myfatal(void *ctx) {
 }
 
 /* [hot callback] Print error message */
-void message(void *ctx, int type, char *text) {
+void message(void *ctx, int type, const char *text) {
     cbCtx h = ctx;
 
     /* Print type */
@@ -660,7 +660,7 @@ static void fcdbError(void *ctx, unsigned fileid, long line, int errid) {
 static int fcdbAddName(void *ctx,
                        unsigned short platformId, unsigned short platspecId,
                        unsigned short languageId, unsigned short nameId,
-                       signed char *str) {
+                       const char *str) {
     cbCtx h = ctx;
     return hotAddName(h->hot.ctx,
                       platformId, platspecId, languageId, nameId, str);

@@ -411,12 +411,10 @@ void hotCalcSearchParams(unsigned unitSize, long nUnits,
 void hotWritePString(hotCtx g, char *string);
 char *hotGetString(hotCtx g, SID sid, unsigned *length);
 
-void hotAddVertOriginY(hotCtx g, GID gid, short value,
-                       char *filename, int linenum);
-void hotAddVertAdvanceY(hotCtx g, GID gid, short value,
-                        char *filename, int linenum);
+void hotAddVertOriginY(hotCtx g, GID gid, short value);
+void hotAddVertAdvanceY(hotCtx g, GID gid, short value);
 
-void setVendId_str(hotCtx g, char *vend);
+void setVendId_str(hotCtx g, const char *vend);
 
 #ifdef SUNOS
 char *bcopy(const void *src, void *dst, int len);

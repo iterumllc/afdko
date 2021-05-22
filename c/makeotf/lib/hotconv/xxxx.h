@@ -7,6 +7,10 @@
 
 #include "common.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define xxxx_ TAG('x', 'x', 'x', 'x')
 
 /* Standard functions */
@@ -17,5 +21,9 @@ void xxxxReuse(hotCtx g);
 void xxxxFree(hotCtx g);
 
 /* Supplementary functions */
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* XXXX_H */

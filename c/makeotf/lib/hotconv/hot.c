@@ -182,7 +182,7 @@ hotCtx hotNew(hotCallbacks *hotcb) {
     return g;
 }
 
-void setVendId_str(hotCtx g, char *vend) {
+void setVendId_str(hotCtx g, const char *vend) {
     char *id;
 
     id = (char *)hotMemNew(g, strlen(vend) + 1);
@@ -451,8 +451,7 @@ char *hotReadFont(hotCtx g, int flags, int *psinfo, hotReadFontOverrides *fontOv
 }
 
 /* Add glyph's vertical origin y-value to glyph info. (Not an API.) */
-void hotAddVertOriginY(hotCtx g, GID gid, short value,
-                       char *filename, int linenum) {
+void hotAddVertOriginY(hotCtx g, GID gid, short value) {
     hotGlyphInfo *hotgi = &g->font.glyphs.array[gid]; /* gid already validated */
 
     if (!(g->convertFlags & HOT_SEEN_VERT_ORIGIN_OVERRIDE)) {
@@ -464,13 +463,11 @@ void hotAddVertOriginY(hotCtx g, GID gid, short value,
         if (hotgi->vOrigY == value) {
             hotMsg(g, hotNOTE,
                    "Ignoring duplicate VertOriginY entry for "
-                   "glyph %s [%s %d]",
-                   g->note.array, filename, linenum);
+                   "glyph %s", g->note.array);
         } else {
             hotMsg(g, hotFATAL,
                    "VertOriginY redefined for "
-                   "glyph %s [%s %d]",
-                   g->note.array, filename, linenum);
+                   "glyph %s", g->note.array);
         }
     } else {
         hotgi->vOrigY = value;
@@ -478,8 +475,7 @@ void hotAddVertOriginY(hotCtx g, GID gid, short value,
 }
 
 /* Add glyph's vertical advance width to the  glyph info. (Not an API.) */
-void hotAddVertAdvanceY(hotCtx g, GID gid, short value,
-                        char *filename, int linenum) {
+void hotAddVertAdvanceY(hotCtx g, GID gid, short value) {
     hotGlyphInfo *hotgi = &g->font.glyphs.array[gid]; /* gid already validated */
     if (!(g->convertFlags & HOT_SEEN_VERT_ORIGIN_OVERRIDE)) {
         g->convertFlags |= HOT_SEEN_VERT_ORIGIN_OVERRIDE;
@@ -490,13 +486,11 @@ void hotAddVertAdvanceY(hotCtx g, GID gid, short value,
         if (hotgi->vAdv == value) {
             hotMsg(g, hotNOTE,
                    "Ignoring duplicate VertAdvanceY entry for "
-                   "glyph %s [%s %d]",
-                   g->note.array, filename, linenum);
+                   "glyph %s", g->note.array);
         } else {
             hotMsg(g, hotFATAL,
                    "VertAdvanceY redefined for "
-                   "glyph %s [%s %d]",
-                   g->note.array, filename, linenum);
+                   "glyph %s", g->note.array);
         }
     } else {
         hotgi->vAdv = -value;
@@ -1078,7 +1072,7 @@ void hotAddMiscData(hotCtx g,
 
 /* Prepare Windows name by converting \-format numbers to UTF-8. Return 1 on
    syntax error else 0. */
-static int prepWinName(hotCtx g, signed char *src) {
+static int prepWinName(hotCtx g, const char *src) {
     /* Next state table */
     static unsigned char next[5][6] = {
         /*  \       0-9     a-f     A-F     *       \0       index */
@@ -1211,7 +1205,7 @@ static int prepWinName(hotCtx g, signed char *src) {
 
 /* Prepare Macintosh name by converting \-format numbers to bytes. Return 1 on
    syntax error else 0. */
-static int prepMacName(hotCtx g, signed char *src) {
+static int prepMacName(hotCtx g, const char *src) {
     /* Next state table */
     static unsigned char next[3][6] = {
         /*  \       0-9     a-f     A-F     *       \0       index */
@@ -1337,7 +1331,7 @@ static int prepMacName(hotCtx g, signed char *src) {
 int hotAddName(hotCtx g,
                unsigned short platformId, unsigned short platspecId,
                unsigned short languageId, unsigned short nameId,
-               signed char *str) {
+               const char *str) {
     if ((platformId == HOT_NAME_MS_PLATFORM) ? prepWinName(g, str) : prepMacName(g, str)) {
         return 1;
     }
@@ -1444,16 +1438,16 @@ void hotQuitOnError(hotCtx g) {
    NULL). If note used, handle reuse of g->note. */
 void CDECL hotMsg(hotCtx g, int level, const char *fmt, ...) {
     if (g->cb.message != NULL) {
-        int lenName = g->font.FontName.cnt + 2;
+        // int lenName = g->font.FontName.cnt + 2;
 
         if (fmt == NULL) {
-            if (g->font.FontName.cnt != 0) {
+            /*if (g->font.FontName.cnt != 0) {
                 int lenNote = g->note.cnt;
-                /* dnaEXTEND(g->note, lenName);
+                dnaEXTEND(g->note, lenName);
                 MOVE(&g->note.array[lenName], g->note.array, lenNote);
                 sprintf(g->note.array, "<%s>", g->font.FontName.array);
-                g->note.array[lenName - 1] = ' '; */
-            }
+                g->note.array[lenName - 1] = ' ';
+            } */
             g->cb.message(g->cb.ctx, level, g->note.array);
         } else {
             va_list ap;
@@ -1471,7 +1465,7 @@ void CDECL hotMsg(hotCtx g, int level, const char *fmt, ...) {
                 p = message;
             // }
             if ( level != hotHEADING ) { // Don't print headings for headings
-                const char *premsg, *prefix;
+                char *premsg, *prefix;
                 featMsgPrefix(g, &premsg, &prefix);
                 // Usually information that the file has changed
                 if ( premsg != NULL )

@@ -13,6 +13,7 @@
 #include "feat.h"
 #include "name.h"
 
+#include <assert.h>
 #include <stdlib.h>
 #include <stdio.h>
 
@@ -90,7 +91,7 @@ typedef struct {
     GID gid;
     dnaDCL(AnchorMarkInfo, anchorMarkInfo);
     long componentIndex; /* order in mark to lig statement that this base glyph reference was encountered.*/
-    long lineNum;
+    char *locDesc;
 } BaseGlyphRec;
 
 typedef union {
@@ -145,7 +146,6 @@ typedef struct { /* New subtable data */
     short pairFmt;              /* Fmt (1 or 2) of GPOS pair */
     unsigned short pairValFmt1; /* Fmt (1 or 2) of first value record  of GPOS pair */
     unsigned short pairValFmt2; /* Fmt (1 or 2) of second value record of GPOS pair */
-    char *fileName;             /* the current feature file name */
 } SubtableInfo;
 
 struct GPOSCtx_ {
@@ -174,7 +174,6 @@ struct GPOSCtx_ {
     /* Info for chaining contextual lookups */
     dnaDCL(SubtableInfo, anonSubtable);   /* Anon subtable accumulator */
     dnaDCL(PosLookupRecord *, posLookup); /* Pointers to all records that need to be adjusted */
-    dnaDCL(GNode *, prod);                /* Tmp for cross product */
 
     unsigned short maxContext;
 
@@ -202,11 +201,11 @@ static void fillChain(hotCtx g, GPOSCtx h);
 static void writeChainPos(hotCtx g, GPOSCtx h, Subtable *sub);
 static void freeChain3(hotCtx g, GPOSCtx h, Subtable *sub);
 static void freeChain(hotCtx g, GPOSCtx h, Subtable *sub);
-static void checkBaseAnchorConflict(hotCtx g, BaseGlyphRec *baseGlyphArray, long recCnt, char *fileName, int isMarkToLigature);
+static void checkBaseAnchorConflict(hotCtx g, BaseGlyphRec *baseGlyphArray, long recCnt, int isMarkToLigature);
 static long findMarkClassIndex(SubtableInfo *si, GNode *markNode);
-static int addMarkClass(hotCtx g, SubtableInfo *si, GNode *markNode, char *filename, int lineNum);
-static void GPOSAdCursive(hotCtx g, SubtableInfo *si, GNode *targ, int anchorCount, AnchorMarkInfo *anchorMarkInfo, char *fileName, long lineNum);
-static void GPOSAddMark(hotCtx g, SubtableInfo *si, GNode *targ, int anchorCount, AnchorMarkInfo *anchorMarkInfo, char *fileName, long lineNum);
+static int addMarkClass(hotCtx g, SubtableInfo *si, GNode *markNode);
+static void GPOSAdCursive(hotCtx g, SubtableInfo *si, GNode *targ, int anchorCount, const AnchorMarkInfo *anchorMarkInfo, const char *locDesc);
+static void GPOSAddMark(hotCtx g, SubtableInfo *si, GNode *targ, int anchorCount, const AnchorMarkInfo *anchorMarkInfo, const char *locDesc);
 static void fillMarkToBase(hotCtx g, GPOSCtx h);
 static void writeMarkToBase(hotCtx g, GPOSCtx h, Subtable *sub);
 static void freeMarkToBase(hotCtx g, Subtable *sub);
@@ -222,6 +221,15 @@ static SubtableInfo *addAnonPosRule(hotCtx g, GPOSCtx h, SubtableInfo *cur_si, u
 
 static void GPOSAddSingle(hotCtx g, SubtableInfo *si, GNode *targ,
                           int xPlacement, int yPlacement, int xAdvance, int yAdvance);
+
+static void copyStr(hotCtx g, char **dst, const char *src) {
+    if (src == NULL) {
+        *dst = NULL;
+    } else {
+        *dst = (char *) MEM_NEW(g, strlen(src) + 1);
+        strcpy(*dst, src);
+    }
+}
 
 #if HOT_DEBUG
 /* Initialize sub. Not needed; just for debug */
@@ -324,7 +332,6 @@ void GPOSNew(hotCtx g) {
     GPOSCtx h = MEM_NEW(g, sizeof(struct GPOSCtx_));
 
     h->new.script = h->new.language = h->new.feature = TAG_UNDEF;
-    h->new.fileName = NULL;
 
     dnaINIT(g->DnaCTX, h->new.rules, 50, 200);
     dnaINIT(g->DnaCTX, h->new.single, 500, 1000);
@@ -341,7 +348,6 @@ void GPOSNew(hotCtx g) {
     dnaINIT(g->DnaCTX, h->anonSubtable, 3, 10);
     h->anonSubtable.func = anonSubtableInit;
     dnaINIT(g->DnaCTX, h->posLookup, 25, 100);
-    dnaINIT(g->DnaCTX, h->prod, 20, 100);
 
     h->startNewPairPosSubtbl = 0;
     dnaINIT(g->DnaCTX, h->classDef[0].classInfo, 200, 500);
@@ -371,9 +377,7 @@ int GPOSFill(hotCtx g) {
         hotMsg(g, hotFATAL, "aborting because of errors");
     }
 
-#if HOT_FEAT_SUPPORT
     createAnonLookups(g, h);
-#endif /* HOT_FEAT_SUPPORT */
 
     /* Add OTL features */
     /* See GSUB.c::GSUBFill() for an explanation of the subtable order */
@@ -401,13 +405,11 @@ int GPOSFill(hotCtx g) {
     otlDumpSizes(g, h->otl, h->offset.subtable, h->offset.extension);
 #endif /* HOT_DEBUG */
 
-#if HOT_FEAT_SUPPORT
     /* setAnonLookupIndices marks as used not only the anonymous lookups, */
     /* but also all lookups that were referenced from chain pos rules,    */
     /* including the stand-alone lookups. This is why                     */
     /* checkStandAloneTablRefs has to follow setAnonLookupIndices.        */
     setAnonLookupIndices(g, h);
-#endif /* HOT_FEAT_SUPPORT */
 
     checkStandAloneTablRefs(g, h->otl);
 
@@ -627,6 +629,7 @@ void GPOSFree(hotCtx g) {
     dnaFREE(h->new.markClassList);
     for (i = 0; i < h->new.baseList.cnt; i++) {
         dnaFREE(h->new.baseList.array[i].anchorMarkInfo);
+        MEM_FREE(g, h->new.baseList.array[i].locDesc);
     }
     dnaFREE(h->new.baseList);
     dnaFREE(h->new.single);
@@ -639,7 +642,6 @@ void GPOSFree(hotCtx g) {
     }
     dnaFREE(h->anonSubtable);
     dnaFREE(h->posLookup);
-    dnaFREE(h->prod);
 
     dnaFREE(h->classDef[0].classInfo);
     dnaFREE(h->classDef[0].cov);
@@ -1730,7 +1732,7 @@ static void addSpecPair(hotCtx g, GID first, GID second, short metricsCnt1, shor
    removed. Input GNodes are stored; they are recycled in this function
    (if fmt1), or at GPOSLookupEnd(?) (if fmt2). */
 
-void GPOSAddPair(hotCtx g, void *subtableInfo, GNode *first, GNode *second, char *filename, int lineNum) {
+void GPOSAddPair(hotCtx g, void *subtableInfo, GNode *first, GNode *second, const char *locDesc) {
     GPOSCtx h = g->ctx.GPOS;
     SubtableInfo *si = (SubtableInfo *)subtableInfo;
     short metricsCnt1 = 0;
@@ -1742,22 +1744,22 @@ void GPOSAddPair(hotCtx g, void *subtableInfo, GNode *first, GNode *second, char
     unsigned valFmt1 = 0;
     unsigned valFmt2 = 0;
 
-    if (first->metricsInfo == NULL) {
+    if (first->metricsInfo.cnt == -1) {
         /* If the only metrics record is applied to the second glyph, then */
         /* this is shorthand for applying a single kern value to the first  */
         /* glyph. The parser enforces that if first->metricsInfo == null,   */
         /* then the second value record must exist.                         */
         first->metricsInfo = second->metricsInfo;
-        second->metricsInfo = NULL;
-        metricsCnt1 = first->metricsInfo->cnt;
-        values1 = first->metricsInfo->metrics;
+        second->metricsInfo = METRICSINFOEMPTY;
+        metricsCnt1 = first->metricsInfo.cnt;
+        values1 = first->metricsInfo.metrics;
     } else {
         /* first->metricsInfo exists, but second->metricsInfo may or may not exist */
-        metricsCnt1 = first->metricsInfo->cnt;
-        values1 = first->metricsInfo->metrics;
-        if (second->metricsInfo != NULL) {
-            metricsCnt2 = second->metricsInfo->cnt;
-            values2 = second->metricsInfo->metrics;
+        metricsCnt1 = first->metricsInfo.cnt;
+        values1 = first->metricsInfo.metrics;
+        if (second->metricsInfo.cnt != -1) {
+            metricsCnt2 = second->metricsInfo.cnt;
+            values2 = second->metricsInfo.metrics;
         }
     }
 
@@ -1766,13 +1768,14 @@ void GPOSAddPair(hotCtx g, void *subtableInfo, GNode *first, GNode *second, char
     /* The FEAT_GCLASS is essential for identifying a singleton gclass */
     pairFmt = ((first->flags & FEAT_GCLASS || second->flags & FEAT_GCLASS) && !enumerate) ? 2 : 1;
 
-    if (first->metricsInfo->cnt == 1) {
+    if (first->metricsInfo.cnt == 1) {
         if (isVertFeature(h->new.feature)) {
             valFmt1 = (unsigned short) ValueYAdvance;
         } else {
             valFmt1 = (unsigned short) ValueXAdvance;
         }
     } else {
+        assert( first->metricsInfo.cnt == 4 );
         valFmt1 = makeValueFormat(g, values1[0], values1[1], values1[2], values1[3]);
         if (valFmt1 == 0) {
             /* If someone has specified a value of <0 0 0 0>, then valFmt   */
@@ -1787,14 +1790,15 @@ void GPOSAddPair(hotCtx g, void *subtableInfo, GNode *first, GNode *second, char
         }
     }
 
-    if (second->metricsInfo != NULL) {
-        if (second->metricsInfo->cnt == 1) {
+    if (second->metricsInfo.cnt != -1) {
+        if (second->metricsInfo.cnt == 1) {
             if (isVertFeature(h->new.feature)) {
                 valFmt2 = (unsigned short) ValueYAdvance;
             } else {
                 valFmt2 = (unsigned short) ValueXAdvance;
             }
         } else {
+            assert( second->metricsInfo.cnt == 4 );
             valFmt2 = makeValueFormat(g, values2[0], values2[1], values2[2], values2[3]);
             if (valFmt2 == 0) {
                 /* If someone has specified a value of <0 0 0 0>, then      */
@@ -1844,19 +1848,12 @@ void GPOSAddPair(hotCtx g, void *subtableInfo, GNode *first, GNode *second, char
             if (si->pairFmt == 2) {
                 recyclePairs(h);
                 if (pairFmt == 1) {
-                    char msg[1024];
-
                     featGlyphDump(g, first->gid, ' ', 0);
                     featGlyphDump(g, second->gid, '\0', 0);
-                    if (filename != NULL) {
-                        sprintf(msg, " [%s line %d]", filename, lineNum);
-                    } else {
-                        msg[0] = '\0';
-                    }
                     hotMsg(g, hotWARNING,
                            "Single kern pair occurring after "
-                           "class kern pair in %s: %s%s",
-                           g->error_id_text, g->note.array, msg);
+                           "class kern pair in %s: %s",
+                           g->error_id_text, g->note.array);
                 }
             }
         }
@@ -1874,21 +1871,19 @@ void GPOSAddPair(hotCtx g, void *subtableInfo, GNode *first, GNode *second, char
         if (first->nextCl == NULL && second->nextCl == NULL) {
             addSpecPair(g, first->gid, second->gid, metricsCnt1, values1, metricsCnt2, values2);
         }
-#if HOT_FEAT_SUPPORT
         else {
             /* Enumerate */
             unsigned i;
             unsigned length;
-            GNode ***prod;
+            GNode **prod;
 
             prod = featMakeCrossProduct(g, first, &length);
             for (i = 0; i < length; i++) {
-                GNode *specPair = (*prod)[i];
+                GNode *specPair = prod[i];
                 addSpecPair(g, specPair->gid, specPair->nextSeq->gid, metricsCnt1, values1, metricsCnt2, values2);
                 featRecycleNodes(g, specPair);
             }
         }
-#endif /* HOT_FEAT_SUPPORT */
         featRecycleNodes(g, first);
     } else {
         /* --- Add class pair --- */
@@ -1939,26 +1934,20 @@ void GPOSAddPair(hotCtx g, void *subtableInfo, GNode *first, GNode *second, char
             char msg[1024];
             featGlyphClassDump(g, first, ' ', 0);
             featGlyphClassDump(g, second, '\0', 0);
-            if (filename != NULL) {
-                sprintf(msg, " [%s line %d]", filename, lineNum);
-            } else {
-                msg[0] = '\0';
-            }
-
             hotMsg(g, hotWARNING,
                    "Start of new pair positioning subtable forced by overlapping glyph classes in %s; "
-                   "some pairs may never be accessed: %s%s",
+                   "some pairs may never be accessed: %s",
                    g->error_id_text,
                    g->note.array,
                    msg);
 
             h->startNewPairPosSubtbl = 1;
-            GPOSAddPair(g, si, first, second, filename, lineNum);
+            GPOSAddPair(g, si, first, second, locDesc);
         }
     }
 }
 
-static void addPosRule(hotCtx g, GPOSCtx h, SubtableInfo *si, GNode *targ, char *fileName, long lineNum, int anchorCount, AnchorMarkInfo *anchorMarkInfo) {
+static void addPosRule(hotCtx g, GPOSCtx h, SubtableInfo *si, GNode *targ, const char *locDesc, int anchorCount, const AnchorMarkInfo *anchorMarkInfo) {
     PosRule *rule;
     unsigned short lkpType;
 
@@ -1991,17 +1980,18 @@ static void addPosRule(hotCtx g, GPOSCtx h, SubtableInfo *si, GNode *targ, char 
                     nextNode = nextNode->nextSeq;
                     continue;
                 }
-                if ((nextNode->metricsInfo == NULL) || (nextNode->metricsInfo->cnt == 0)) {
+                if (nextNode->metricsInfo.cnt == -1) {
                     nextNode = nextNode->nextSeq;
                     continue;
                 }
 
                 anon_si = addAnonPosRule(g, h, si, lkpType, nextNode);
-                if (nextNode->metricsInfo->cnt == 1) {
+                if (nextNode->metricsInfo.cnt == 1) {
                     /* assume it is an xAdvance adjustment */
-                    GPOSAddSingle(g, anon_si, nextNode, 0, 0, nextNode->metricsInfo->metrics[0], 0);
+                    GPOSAddSingle(g, anon_si, nextNode, 0, 0, nextNode->metricsInfo.metrics[0], 0);
                 } else {
-                    short *metrics = &nextNode->metricsInfo->metrics[0];
+                    assert( nextNode->metricsInfo.cnt == 4 );
+                    short *metrics = nextNode->metricsInfo.metrics;
 
                     GPOSAddSingle(g, anon_si, nextNode, metrics[0], metrics[1],
                                   metrics[2], metrics[3]);
@@ -2021,11 +2011,12 @@ static void addPosRule(hotCtx g, GPOSCtx h, SubtableInfo *si, GNode *targ, char 
             rule = dnaNEXT(si->rules);
             rule->targ = targ;
         } else {
-            if (targ->metricsInfo->cnt == 1) {
+            if (targ->metricsInfo.cnt == 1) {
                 /* assume it is an xAdvance adjustment */
-                GPOSAddSingle(g, si, targ, 0, 0, targ->metricsInfo->metrics[0], 0);
+                GPOSAddSingle(g, si, targ, 0, 0, targ->metricsInfo.metrics[0], 0);
             } else {
-                short *metrics = &targ->metricsInfo->metrics[0];
+                assert( targ->metricsInfo.cnt == 4 );
+                short *metrics = targ->metricsInfo.metrics;
 
                 GPOSAddSingle(g, si, targ, metrics[0], metrics[1],
                               metrics[2], metrics[3]);
@@ -2033,11 +2024,9 @@ static void addPosRule(hotCtx g, GPOSCtx h, SubtableInfo *si, GNode *targ, char 
         }
         return;
     }
-#if HOT_FEAT_SUPPORT
     else if (lkpType == GPOSPair) {
         /* metrics are now associated with the node they follow */
-        GPOSAddPair(g, si, targ, targ->nextSeq,
-                    fileName, lineNum);
+        GPOSAddPair(g, si, targ, targ->nextSeq, locDesc);
         return;
     } else if (lkpType == GPOSCursive) {
         /* Add BaseGlyphRec records, making sure that there is no overlap in anchor and markClass */
@@ -2056,7 +2045,7 @@ static void addPosRule(hotCtx g, GPOSCtx h, SubtableInfo *si, GNode *targ, char 
             }
 
             anon_si = addAnonPosRule(g, h, si, lkpType, nextNode);
-            GPOSAdCursive(g, anon_si, nextNode, anchorCount, anchorMarkInfo, fileName, lineNum);
+            GPOSAdCursive(g, anon_si, nextNode, anchorCount, anchorMarkInfo, locDesc);
 
             /* now add the nodes to the contextual rule list. */
             si->parentLkpType = GPOSChain; /* So that this subtable will be processed as a chain at lookup end -> fill. */
@@ -2076,7 +2065,7 @@ static void addPosRule(hotCtx g, GPOSCtx h, SubtableInfo *si, GNode *targ, char 
             /* is contextual */
         } else {
             /* isn't contextual */
-            GPOSAdCursive(g, si, targ, anchorCount, anchorMarkInfo, fileName, lineNum);
+            GPOSAdCursive(g, si, targ, anchorCount, anchorMarkInfo, locDesc);
             featRecycleNodes(g, targ); /* I do this here rather than in feat.c;                       */
                                        /* addPos, as I have to NOT recycle them if they are contextual */
         }
@@ -2100,7 +2089,7 @@ static void addPosRule(hotCtx g, GPOSCtx h, SubtableInfo *si, GNode *targ, char 
 
             anon_si = addAnonPosRule(g, h, si, lkpType, nextNode);
 
-            GPOSAddMark(g, anon_si, nextNode, anchorCount, anchorMarkInfo, fileName, lineNum);
+            GPOSAddMark(g, anon_si, nextNode, anchorCount, anchorMarkInfo, locDesc);
 
             /* now add the nodes to the contextual rule list. */
             si->parentLkpType = GPOSChain; /* So that this subtable will be processed as a chain at lookup end -> fill. */
@@ -2118,7 +2107,7 @@ static void addPosRule(hotCtx g, GPOSCtx h, SubtableInfo *si, GNode *targ, char 
             }
         } else {
             /* isn't contextual */
-            GPOSAddMark(g, si, targ, anchorCount, anchorMarkInfo, fileName, lineNum);
+            GPOSAddMark(g, si, targ, anchorCount, anchorMarkInfo, locDesc);
             featRecycleNodes(g, targ); /* I do this here rather than in feat.c;                       */
                                        /* addPos, as I have to NOT recycle them if they are contextual */
         }
@@ -2127,25 +2116,23 @@ static void addPosRule(hotCtx g, GPOSCtx h, SubtableInfo *si, GNode *targ, char 
         rule = dnaNEXT(si->rules);
         rule->targ = targ;
     }
-#endif /* HOT_FEAT_SUPPORT */
 }
 
 /* Add rule (enumerating if necessary) to subtable si */
 
-void GPOSRuleAdd(hotCtx g, int lkpType, GNode *targ, char *fileName, long lineNum, int anchorCount, AnchorMarkInfo *anchorMarkInfo) {
+void GPOSRuleAdd(hotCtx g, int lkpType, GNode *targ, const char *locDesc, int anchorCount, const AnchorMarkInfo *anchorMarkInfo) {
     GPOSCtx h = g->ctx.GPOS;
 
     if (g->hadError) {
         return;
     }
 
-    h->new.fileName = fileName;
     if (targ->flags & FEAT_HAS_MARKED) {
         h->new.parentLkpType = lkpType;
         h->new.lkpType = GPOSChain;
     }
 
-    addPosRule(g, h, &h->new, targ, fileName, lineNum, anchorCount, anchorMarkInfo);
+    addPosRule(g, h, &h->new, targ, locDesc, anchorCount, anchorMarkInfo);
 }
 
 /* Compare kern pairs, fmt1. Pairs marked for deletion sink to bottom */
@@ -2772,14 +2759,6 @@ typedef struct {
 #define CHAIN3_SIZE(nBack, nInput, nLook, nPos) (uint16 * 5 +                                              \
                                                  uint16 * (nBack) + uint16 * (nInput) + uint16 * (nLook) + \
                                                  POS_LOOKUP_RECORD_SIZE * (nPos))
-#if 0
-static void recycleProd(GPOSCtx h) {
-    long i;
-    for (i = 0; i < h->prod.cnt; i++) {
-        featRecycleNodes(h->g, h->prod.array[i]);
-    }
-}
-#endif
 
 /* Tries to add rule to current anon subtbl. If successful, returns 1, else 0.
    If rule already exists in subtbl, recycles targ */
@@ -2789,9 +2768,9 @@ static int cmpWithPosRule(GNode *targ, SingleRec *cmpRec, int nFound) {
     GID gid2 = cmpRec->gid;
     int checkedMetrics = 0;
     int i;
-    short metricsCnt1 = targ->metricsInfo->cnt;
+    short metricsCnt1 = targ->metricsInfo.cnt;
     short metricsCnt2;
-    short *metrics1 = targ->metricsInfo->metrics;
+    short *metrics1 = targ->metricsInfo.metrics;
     short metrics2[4];
 
     if (cmpRec->valFmt == ValueXAdvance) {
@@ -2804,6 +2783,8 @@ static int cmpWithPosRule(GNode *targ, SingleRec *cmpRec, int nFound) {
         metrics2[2] = cmpRec->xAdv;
         metrics2[3] = cmpRec->yAdv;
     }
+
+    assert( metricsCnt1 != -1 );
 
     for (; t1 != NULL; t1 = t1->nextCl) {
         if ((t1->gid == gid2) && (!(t1->flags & FEAT_MISC))) {
@@ -2923,7 +2904,6 @@ static SubtableInfo *addAnonPosRule(hotCtx g, GPOSCtx h, SubtableInfo *cur_si, u
     si->useExtension = cur_si->useExtension; /* Use extension lookupType? */
     si->lkpFlag = cur_si->lkpFlag;
     si->markSetIndex = cur_si->markSetIndex;
-    si->fileName = cur_si->fileName; /* the current feature file name */
 
     /* Now for the new values that are specific to this table */
     si->lkpType = lkpType;
@@ -2945,7 +2925,6 @@ static void createAnonLookups(hotCtx g, GPOSCtx h) {
         SubtableInfo *newsi = &h->new;
         si->script = si->language = si->feature = TAG_UNDEF; /* so that these will sort to the end of the subtable array       */
                                                              /* and will not be considered for adding to the FeatureList table */
-        si->fileName = NULL;
 
         *newsi = *si;
 
@@ -3506,7 +3485,7 @@ typedef struct {
 } MarkLigaturePosFormat1;
 #define MARK_TO_LIGATURE_1_SIZE (uint16 * 6)
 
-static int cmpAnchors(AnchorMarkInfo *first, AnchorMarkInfo *second) {
+static int cmpAnchors(const AnchorMarkInfo *first, const AnchorMarkInfo *second) {
     if (first->componentIndex > second->componentIndex) {
         return 1;
     } else if (first->componentIndex < second->componentIndex) {
@@ -3603,7 +3582,7 @@ static int CDECL cmpLigBaseRec(const void *first, const void *second) {
     return retVal;
 }
 
-static void checkBaseAnchorConflict(hotCtx g, BaseGlyphRec *baseGlyphArray, long recCnt, char *fileName, int isMarkToLigature) {
+static void checkBaseAnchorConflict(hotCtx g, BaseGlyphRec *baseGlyphArray, long recCnt, int isMarkToLigature) {
     BaseGlyphRec *prev, *cur, *last;
     if (recCnt < 2) {
         return;
@@ -3618,15 +3597,9 @@ static void checkBaseAnchorConflict(hotCtx g, BaseGlyphRec *baseGlyphArray, long
     do {
         if (cur->gid == prev->gid) {
             /* For mark to base and mark to mark, only a single entry is allowed in  the baseGlyphArray for a given GID. */
-            char msg[1024];
             featGlyphDump(g, cur->gid, '\0', 0);
-            if (fileName != NULL) {
-                sprintf(msg, " [%s current line %ld previous line %ld]", fileName, cur->lineNum, prev->lineNum);
-            } else {
-                msg[0] = '\0';
-            }
-            hotMsg(g, hotERROR, "MarkToBase or MarkToMark error in %s. Another statement has already defined the anchors and marks on glyph '%s'. %s",
-                    g->error_id_text, g->note.array, msg);
+            hotMsg(g, hotERROR, "MarkToBase or MarkToMark error in %s. Another statement has already defined the anchors and marks on glyph '%s'. [current at %s, previous at %s]",
+                    g->error_id_text, g->note.array, cur->locDesc, prev->locDesc);
         } else {
             /* For mark to ligature, each successive base glyph entry     */
             /* defines the next component. We just need to make sure that */
@@ -3638,7 +3611,7 @@ static void checkBaseAnchorConflict(hotCtx g, BaseGlyphRec *baseGlyphArray, long
     return;
 }
 
-static void checkBaseLigatureConflict(hotCtx g, BaseGlyphRec *baseGlyphArray, long recCnt, char *fileName, int isMarkToLigature) {
+static void checkBaseLigatureConflict(hotCtx g, BaseGlyphRec *baseGlyphArray, long recCnt, int isMarkToLigature) {
     BaseGlyphRec *prev, *cur, *last;
     if (recCnt < 2) {
         return;
@@ -3656,16 +3629,10 @@ static void checkBaseLigatureConflict(hotCtx g, BaseGlyphRec *baseGlyphArray, lo
             cpi1 = prev->anchorMarkInfo.array[0].componentIndex;
             cpi2 = cur->anchorMarkInfo.array[0].componentIndex;
             if (cpi1 == cpi2) {
-                char msg[1024];
                 featGlyphDump(g, cur->gid, '\0', 0);
-                if (fileName != NULL) {
-                    sprintf(msg, " [%s current line %ld previous line %ld]", fileName, cur->lineNum, prev->lineNum);
-                } else {
-                    msg[0] = '\0';
-                }
                 hotMsg(g, hotERROR,
-                       "MarkToLigature error in %s. Two different statements referencing the ligature glyph '%s' have assigned the same mark class to the same ligature component. %s",
-                    g->error_id_text, g->note.array, msg);
+                       "MarkToLigature error in %s. Two different statements referencing the ligature glyph '%s' have assigned the same mark class to the same ligature component. [current at %s, previous at %s]",
+                    g->error_id_text, g->note.array, cur->locDesc, prev->locDesc);
             }
         } else {
             prev = cur;
@@ -3686,7 +3653,7 @@ static long findMarkClassIndex(SubtableInfo *si, GNode *markNode) {
     return -1;
 }
 
-static int addMarkClass(hotCtx g, SubtableInfo *si, GNode *markNode, char *fileName, int lineNum) {
+static int addMarkClass(hotCtx g, SubtableInfo *si, GNode *markNode) {
     GNode *nextClass = markNode;
     int ci = si->markClassList.cnt;
     int i;
@@ -3699,16 +3666,10 @@ static int addMarkClass(hotCtx g, SubtableInfo *si, GNode *markNode, char *fileN
             GNode *curNode = si->markClassList.array[i].gnode;
             while (curNode != NULL) {
                 if (curNode->gid == newGID) {
-                    char msg[1024];
                     GNode *prevMarkNode = si->markClassList.array[i].gnode;
                     featGlyphDump(g, newGID, '\0', 0);
-                    if (fileName != NULL) {
-                        sprintf(msg, " [%s line %d]", fileName, lineNum);
-                    } else {
-                        msg[0] = '\0';
-                    }
-                    hotMsg(g, hotERROR, "In %s, glyph '%s' occurs in two different mark classes. Previous mark class: %s. Current mark class: %s. %s",
-                           g->error_id_text, g->note.array, prevMarkNode->markClassName, markNode->markClassName, msg);
+                    hotMsg(g, hotERROR, "In %s, glyph '%s' occurs in two different mark classes. Previous mark class: %s. Current mark class: %s.",
+                           g->error_id_text, g->note.array, prevMarkNode->markClassName, markNode->markClassName);
                     ci = -1;
                 }
                 curNode = curNode->nextCl;
@@ -3725,15 +3686,9 @@ static int addMarkClass(hotCtx g, SubtableInfo *si, GNode *markNode, char *fileN
             GNode *testNode = nextClass->nextCl;
             while (testNode != NULL) {
                 if (testNode->gid == nextClass->gid) {
-                    char msg[1024];
                     featGlyphDump(g, testNode->gid, '\0', 0);
-                    if (fileName != NULL) {
-                        sprintf(msg, " [%s line %d]", fileName, lineNum);
-                    } else {
-                        msg[0] = '\0';
-                    }
-                    hotMsg(g, hotERROR, "In %s, glyph '%s' is repeated in the current class definition. Mark class: %s. %s",
-                           g->error_id_text, g->note.array, markNode->markClassName, msg);
+                    hotMsg(g, hotERROR, "In %s, glyph '%s' is repeated in the current class definition. Mark class: %s.",
+                           g->error_id_text, g->note.array, markNode->markClassName);
                     ci = -1;
                 }
                 testNode = testNode->nextCl;
@@ -3764,7 +3719,7 @@ static int CDECL cmpMarkRec(const void *first, const void *second) {
     }
 }
 
-static LOffset getAnchoOffset(hotCtx g, AnchorMarkInfo *anchor, void *fmt) {
+static LOffset getAnchoOffset(hotCtx g, const AnchorMarkInfo *anchor, void *fmt) {
     long i = 0;
     MarkBasePosFormat1 *localFmt = (MarkBasePosFormat1 *)fmt;
     AnchorListRec *anchorRec = NULL;
@@ -3801,7 +3756,7 @@ static LOffset getAnchoOffset(hotCtx g, AnchorMarkInfo *anchor, void *fmt) {
     return anchorRec->offset;
 }
 
-static void GPOSAddMark(hotCtx g, SubtableInfo *si, GNode *targ, int anchorCount, AnchorMarkInfo *anchorMarkInfo, char *fileName, long lineNum) {
+static void GPOSAddMark(hotCtx g, SubtableInfo *si, GNode *targ, int anchorCount, const AnchorMarkInfo *anchorMarkInfo, const char *locDesc) {
     GNode *nextNode = targ;
     BaseGlyphRec *baseRec = NULL;
 
@@ -3821,7 +3776,7 @@ static void GPOSAddMark(hotCtx g, SubtableInfo *si, GNode *targ, int anchorCount
                 dnaINIT(g->DnaCTX, baseRec->anchorMarkInfo, 4, 4);
                 baseRec->anchorMarkInfo.func = initAnchorArray;
                 baseRec->gid = nextNode->gid;
-                baseRec->lineNum = lineNum;
+                copyStr(g, &baseRec->locDesc, locDesc);
                 prevComponentIndex = anchorMarkInfo[j].componentIndex;
             }
             {
@@ -3833,7 +3788,7 @@ static void GPOSAddMark(hotCtx g, SubtableInfo *si, GNode *targ, int anchorCount
                 }
                 markClassIndex = findMarkClassIndex(si, baseAR->markClass);
                 if (markClassIndex < 0) {
-                    markClassIndex = addMarkClass(g, si, baseAR->markClass, fileName, lineNum);
+                    markClassIndex = addMarkClass(g, si, baseAR->markClass);
                 }
                 baseAR->markClassIndex = markClassIndex;
             }
@@ -3904,7 +3859,7 @@ static void fillMarkToBase(hotCtx g, GPOSCtx h) {
     /* Build base glyph coverage list from rules. First, we need to sort   */
     /* the base record list by GID, and make sure there are no errors Then */
     /* we can simply step through it to make the base coverage table.      */
-    checkBaseAnchorConflict(g, h->new.baseList.array, h->new.baseList.cnt, h->new.fileName, 0);
+    checkBaseAnchorConflict(g, h->new.baseList.array, h->new.baseList.cnt, 0);
     {
         long numBaseGlyphs = 0;
         BaseRecord *nextRec;
@@ -3943,15 +3898,9 @@ static void fillMarkToBase(hotCtx g, GPOSCtx h) {
             for (j = 0; j < baseRec->anchorMarkInfo.cnt; j++) {
                 if (nextRec->BaseAnchorArray[baseRec->anchorMarkInfo.array[j].markClassIndex] != 0xFFFFFFFFL) {
                     /*it has already been filled in !*/
-                    char msg[1024];
                     featGlyphDump(g, prevGID, '\0', 0);
-                    if (h->new.fileName != NULL) {
-                        sprintf(msg, " [%s line %ld]", h->new.fileName, baseRec->lineNum);
-                    } else {
-                        msg[0] = '\0';
-                    }
-                    hotMsg(g, hotERROR, "MarkToBase or MarkToMark error in %s. Another statement has already assigned the current mark class to another anchor point on glyph '%s'. %s",
-                           g->error_id_text, g->note.array, msg);
+                    hotMsg(g, hotERROR, "MarkToBase or MarkToMark error in %s. Another statement has already assigned the current mark class to another anchor point on glyph '%s'. [previous at %s]",
+                           g->error_id_text, g->note.array, baseRec->locDesc);
                 } else {
                     nextRec->BaseAnchorArray[baseRec->anchorMarkInfo.array[j].markClassIndex] = getAnchoOffset(g, &baseRec->anchorMarkInfo.array[j], fmt); /* offset from start of anchor list */
                 }
@@ -3968,16 +3917,10 @@ static void fillMarkToBase(hotCtx g, GPOSCtx h) {
 
             for (j = 0; j < fmt->ClassCount; j++) {
                 if (baseAnchorArray[j] == 0xFFFFFFFFL) {
-                    char msg[1024];
                     baseAnchorArray[j] = 0xFFFFFFFFL;
                     featGlyphDump(g, baseRec->gid, '\0', 0);
-                    if (h->new.fileName != NULL) {
-                        sprintf(msg, " [%s line %ld]", h->new.fileName, baseRec->lineNum);
-                    } else {
-                        msg[0] = '\0';
-                    }
-                    hotMsg(g, hotWARNING, "MarkToBase or MarkToMark error in %s. Glyph '%s' does not have an anchor point for a mark class that was used in a previous statement in the same lookup table. Setting the anchor point offset to 0.",
-                        g->error_id_text, g->note.array, msg);
+                    hotMsg(g, hotWARNING, "MarkToBase or MarkToMark error in %s. Glyph '%s' does not have an anchor point for a mark class that was used in a previous statement in the same lookup table. Setting the anchor point offset to 0. [previous at %s]",
+                        g->error_id_text, g->note.array, baseRec->locDesc);
                 }
             }
         }
@@ -4159,7 +4102,7 @@ static void fillMarkToLigature(hotCtx g, GPOSCtx h) {
     /* sort the base record list by GID, and make sure there are no errors */
     /* Then we can simply step through it to make the base coverage table. */
     /* sort the recs by base gid value, then by component index. */
-    checkBaseLigatureConflict(g, h->new.baseList.array, h->new.baseList.cnt, h->new.fileName, 0);
+    checkBaseLigatureConflict(g, h->new.baseList.array, h->new.baseList.cnt, 0);
     {
         long numLigatureGlyphs = 0;
         unsigned short numComponents;
@@ -4214,15 +4157,9 @@ static void fillMarkToLigature(hotCtx g, GPOSCtx h) {
                 LOffset *ligatureAnchor = &nextRec->ComponentRecordList[componentIndex * fmt->ClassCount];
                 if (ligatureAnchor[baseRec->anchorMarkInfo.array[j].markClassIndex] != 0xFFFFFFFFL) {
                     /*it has already been filled in !*/
-                    char msg[1024];
                     featGlyphDump(g, curGID, '\0', 0);
-                    if (h->new.fileName != NULL) {
-                        sprintf(msg, " [%s line %ld]", h->new.fileName, baseRec->lineNum);
-                    } else {
-                        msg[0] = '\0';
-                    }
-                    hotMsg(g, hotERROR, "MarkToLigature statement error in %s. Glyph '%s' contains a duplicate mark class assignment for one of the ligature components. %s",
-                        g->error_id_text, g->note.array, msg);
+                    hotMsg(g, hotERROR, "MarkToLigature statement error in %s. Glyph '%s' contains a duplicate mark class assignment for one of the ligature components. [previous at %s]",
+                        g->error_id_text, g->note.array, baseRec->locDesc);
                 } else {
                     if (baseRec->anchorMarkInfo.array[j].format != 0) {
                         /* Skip anchor if the format is 0 aka NULL anchor */
@@ -4370,7 +4307,7 @@ static void freeMarkToLigature(hotCtx g, Subtable *sub) {
 
 /* ------------------------ Cursive Attachment ------------------------ */
 
-static void GPOSAdCursive(hotCtx g, SubtableInfo *si, GNode *targ, int anchorCount, AnchorMarkInfo *anchorMarkInfo, char *fileName, long lineNum) {
+static void GPOSAdCursive(hotCtx g, SubtableInfo *si, GNode *targ, int anchorCount, const AnchorMarkInfo *anchorMarkInfo, const char *locDesc) {
     GNode *nextNode = targ;
 
     while (nextNode != NULL) {
@@ -4384,7 +4321,7 @@ static void GPOSAdCursive(hotCtx g, SubtableInfo *si, GNode *targ, int anchorCou
             AnchorMarkInfo *baseAR = dnaNEXT(baseRec->anchorMarkInfo);
             *baseAR = anchorMarkInfo[j];
         }
-        baseRec->lineNum = lineNum;
+        copyStr(g, &baseRec->locDesc, locDesc);
         nextNode = nextNode->nextCl;
     }
 }
@@ -4413,15 +4350,9 @@ static void fillCursive(hotCtx g, GPOSCtx h) {
         for (i = 0; i < h->new.baseList.cnt; i++) {
             BaseGlyphRec *baseRec = &(h->new.baseList.array[i]);
             if (prevRec && (prevRec->gid == baseRec->gid)) {
-                char msg[1024];
                 featGlyphDump(g, prevRec->gid, '\0', 0);
-                if (h->new.fileName != NULL) {
-                    sprintf(msg, " [%s current line %ld line previous line %ld]", h->new.fileName, baseRec->lineNum, prevRec->lineNum);
-                } else {
-                    msg[0] = '\0';
-                }
-                hotMsg(g, hotERROR, "Cursive statement error in %s. A previous statement has already referenced glyph '%s'. %s",
-                       g->error_id_text, g->note.array, msg);
+                hotMsg(g, hotERROR, "Cursive statement error in %s. A previous statement has already referenced glyph '%s'. [current at %s, previous at %s]",
+                       g->error_id_text, g->note.array, baseRec->locDesc, prevRec->locDesc);
             } else {
                 EntryExitRecord *fmtRec = &fmt->EntryExitRecord[numRecs];
                 AnchorMarkInfo *anchorInfo;

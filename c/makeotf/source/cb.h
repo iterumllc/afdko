@@ -16,24 +16,27 @@ typedef struct cbCtx_ *cbCtx;
 #endif
 
 /* --- Basic functions --- */
-cbCtx cbNew(char *progname, char *pfbdir, char *otfdir,
-            char *cmapdir, char *featdir, dnaCtx mainDnaCtx);
-void cbConvert(cbCtx h, int flags, char *clientVers,
-               char *pfbfile, char *otffile,
-               char *featurefile, char *hcmapfile, char *vcmapfile, char *mcmapfile, char *uvsFile,
-               long otherflags, short macScript, short macLanguage,
-               long addGlyphWeight, unsigned long maxNumSubrs, short fsSelectionMask_on, short fsSelectionMask_off, unsigned short os2Version, char *licenseID);
+extern cbCtx cbNew(char *progname, char *pfbdir, char *otfdir,
+                   char *cmapdir, char *featdir, dnaCtx mainDnaCtx);
+extern void cbConvert(cbCtx h, int flags, char *clientVers,
+                      char *pfbfile, char *otffile,
+                      char *featurefile, char *hcmapfile, char *vcmapfile,
+                      char *mcmapfile, char *uvsFile,
+                      long otherflags, short macScript, short macLanguage,
+                      long addGlyphWeight, unsigned long maxNumSubrs,
+                      short fsSelectionMask_on, short fsSelectionMask_off,
+                      unsigned short os2Version, char *licenseID);
 
-void cbFCDBRead(cbCtx h, char *filename);
-void cbAliasDBRead(cbCtx h, char *filename);
-void cbAliasDBCancel(cbCtx h);
-void cbFree(cbCtx h);
+extern void cbFCDBRead(cbCtx h, char *filename);
+extern void cbAliasDBRead(cbCtx h, char *filename);
+extern void cbAliasDBCancel(cbCtx h);
+extern void cbFree(cbCtx h);
 
 /* --- Utility functions --- */
-void CDECL cbFatal(cbCtx h, char *fmt, ...);
-void CDECL cbWarning(cbCtx h, char *fmt, ...);
-void myfatal(void *ctx);
-void message(void *ctx, int type, char *text);
+extern void CDECL cbFatal(cbCtx h, char *fmt, ...);
+extern void CDECL cbWarning(cbCtx h, char *fmt, ...);
+extern void myfatal(void *ctx);
+extern void message(void *ctx, int type, const char *text);
 #define OTHERFLAGS_ISWINDOWSBOLD (1 << 0)
 #define OTHERFLAGS_HASBULLET (1 << 1)
 

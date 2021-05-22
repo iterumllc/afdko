@@ -75,9 +75,11 @@ typedef struct { /* Subtable record */
 typedef struct GNode_ GNode;
 
 typedef struct {
-    char cnt;
+    int8_t cnt;
     short metrics[4];
 } MetricsInfo;
+
+#define METRICSINFOEMPTY (MetricsInfo) { -1, { 0, 0, 0, 0 } }
 
 typedef struct {
     short int x;
@@ -112,7 +114,7 @@ struct GNode_ {
     GNode *nextCl;    /* next element of class */
     signed aaltIndex; /* index of contributing feature, in order of the aalt definitions. */
                       /* Used only within aalCreate.                                      */
-    MetricsInfo *metricsInfo;
+    MetricsInfo metricsInfo;
     int lookupLabelCount;
     int lookupLabels[255];
     char *markClassName;
@@ -127,6 +129,7 @@ void featReuse(hotCtx g);
 void featFree(hotCtx g);
 
 /* --- Supplementary functions --- */
+void featMsgPrefix(hotCtx g, char **premsg, char **prefix);
 GNode *featSetNewNode(hotCtx g, GID gid);
 void featRecycleNodes(hotCtx g, GNode *node);
 GNode **featGlyphClassCopy(hotCtx g, GNode **dst, GNode *src);
@@ -140,18 +143,13 @@ GNode **featPatternCopy(hotCtx g, GNode **dst, GNode *src, int num);
 void featExtendNodeToClass(hotCtx g, GNode *node, int num);
 int featGetGlyphClassCount(hotCtx g, GNode *gc);
 
-#if HOT_FEAT_SUPPORT
-
 unsigned int featGetPatternLen(hotCtx g, GNode *pat);
 void featGlyphClassSort(hotCtx g, GNode **list, int unique, int reportDups);
-GNode ***featMakeCrossProduct(hotCtx g, GNode *pat, unsigned *n);
+GNode **featMakeCrossProduct(hotCtx g, GNode *pat, unsigned *n);
 
 Label featGetNextAnonLabel(hotCtx g);
 
 int featValidateGPOSChain(hotCtx g, GNode *targ, int lookupType);
-
-
-#endif /* HOT_FEAT_SUPPORT */
 
 #ifdef __cplusplus
 }

@@ -69,10 +69,9 @@ add_library(hotconv STATIC
 
 set_property(TARGET hotconv PROPERTY C_STANDARD 99)
 set_property(TARGET hotconv PROPERTY CXX_STANDARD 11)
-target_compile_definitions(hotconv PRIVATE HOT_FEAT_SUPPORT=1)
 target_include_directories(hotconv PRIVATE AFTER $<$<COMPILE_LANGUAGE:CXX>:/usr/include/antlr4-runtime>)
 
 if ( CMAKE_COMPILER_IS_GNUCC )
-    target_compile_options(hotconv PRIVATE -Wall)
-    set_source_files_properties(${GENERATED_SOURCES} PROPERTIES COMPILE_FLAGS -Wno-attributes)
+    target_compile_options(hotconv PRIVATE -Wall -Wno-attributes)
+    # set_source_files_properties(${GENERATED_SOURCES} PROPERTIES COMPILE_FLAGS -Wno-attributes)
 endif()

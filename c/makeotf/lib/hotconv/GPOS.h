@@ -41,7 +41,7 @@ enum {
     GPOSFeatureParam, /* Treated like a lookup in the code */
 };
 
-void GPOSRuleAdd(hotCtx g, int lkpType, GNode *targ, char *fileName, long lineNum, int anchorCount, AnchorMarkInfo *anchorMarkInfo);
+void GPOSRuleAdd(hotCtx g, int lkpType, GNode *targ, const char *locDesc, int anchorCount, const AnchorMarkInfo *anchorMarkInfo);
 
 void GPOSLookupBegin(hotCtx g, unsigned lkpType, unsigned lkpFlag,
                      Label label, short useExtension, unsigned short useMarkSetIndex);
@@ -52,8 +52,6 @@ void GPOSAddSize(hotCtx g, short *params, unsigned short numParams);
 void GPOSSetSizeMenuNameID(hotCtx g, unsigned short nameID);
 
 int GPOSSubtableBreak(hotCtx g);
-
-void GPOSAddPair(hotCtx g, void *si, GNode *first, GNode *second, char *filename, int lineNum);
 
 void GPOSPrintAFMKernData(hotCtx g);
 

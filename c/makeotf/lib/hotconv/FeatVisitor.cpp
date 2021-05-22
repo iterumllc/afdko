@@ -12,9 +12,12 @@
 #include "vhea.h"
 
 #include <limits>
+#include <math.h>
 
 extern "C" char *curdir();
 extern "C" char *sep();
+
+#define MAX_INCL 50
 
 static const char* findDirName(const char *path)
 {
@@ -53,6 +56,12 @@ FeatVisitor::~FeatVisitor() {
 
 void FeatVisitor::Parse(bool do_includes) {
     std::ifstream stream;
+
+    if ( depth >= MAX_INCL ) {
+        fc->featMsg(hotFATAL, "Can't include [%s]; maximum include levels <%d> reached",
+                    pathname.c_str(), MAX_INCL);
+        return;
+    }
     if ( parent == nullptr ) {
         stream.open(pathname);
         if ( ! stream.is_open() ) {
@@ -181,7 +190,7 @@ void FeatVisitor::tokenPositionMsg(char **msg, bool full) {
                 current_msg_token->getCharPositionInLine()+1);
     } else if ( current_msg_token != nullptr ) {
         assert( full );
-        sprintf(*msg, "file %s line %5ld char %3ld", pathname.c_str(),
+        sprintf(*msg, "file '%s' line %5ld char %3ld", pathname.c_str(),
                 current_msg_token->getLine(),
                 current_msg_token->getCharPositionInLine()+1);
     } else {
@@ -237,7 +246,7 @@ antlrcpp::Any FeatVisitor::visitInclude(FeatParser::IncludeContext *ctx) {
             fname.erase(fname.begin());
         while ( !fname.empty() && std::isspace(*fname.rbegin()) )
             fname.erase(fname.length()-1);
-        inc = new FeatVisitor(fc, fname.c_str(), this, ctx, include_ep);
+        inc = new FeatVisitor(fc, fname.c_str(), this, ctx, include_ep, depth+1);
         inc->Parse(true);
         includes.emplace_back(inc);
         fc->current_visitor = this;
@@ -351,7 +360,7 @@ antlrcpp::Any FeatVisitor::visitFeatureBlock(FeatParser::FeatureBlockContext *ct
         TOK(ctx);
         fc->startFeature(t);
         if ( ctx->USEEXTENSION() != nullptr )
-            fc->flagExtension(true);
+            fc->flagExtension(false);
     }
 
     for (auto i: ctx->featureStatement())
@@ -400,6 +409,7 @@ antlrcpp::Any FeatVisitor::visitCvParameter(FeatParser::CvParameterContext *ctx)
         assert( ctx->CVCHARACTER() != nullptr );
 
     if ( en != 0 ) {
+        fc->addNameFn = &FeatCtx::addFeatureNameString;
         for (auto i: ctx->nameEntryStatement())
             visitNameEntryStatement(i);
         fc->addCVNameID(en);
@@ -458,6 +468,17 @@ antlrcpp::Any FeatVisitor::visitAxisTags(FeatParser::AxisTagsContext *ctx) {
     fc->axistag_count = ctx->tag().size();
     fc->axistag_token = ctx->getStart();
     fc->axistag_visitor = this;
+
+    TOK(ctx);
+    if ( fc->axistag_vert ) {
+        if ( fc->sawBASEvert )
+            fc->featMsg(hotERROR, "VertAxis.BaseTagList must only be specified once");
+        fc->sawBASEvert = true;
+    } else {
+        if ( fc->sawBASEhoriz )
+            fc->featMsg(hotERROR, "HorizAxis.BaseTagList must only be specified once");
+        fc->sawBASEhoriz = true;
+    }
 
     std::vector<Tag> tv;
     tv.reserve(fc->axistag_count);
@@ -577,14 +598,15 @@ antlrcpp::Any FeatVisitor::visitGdefLigCaretIndex(FeatParser::GdefLigCaretIndexC
 void FeatVisitor::doGdefLigCaret(FeatParser::LookupPatternContext *pctx,
                                  std::vector<antlr4::tree::TerminalNode *> nv,
                                  unsigned short format) {
-    assert( stage != vExtract );
+    assert( stage == vExtract );
 
     GNode *pat = translateLookupPattern(pctx, false);
     if (pat->nextSeq != NULL)
         fc->featMsg(hotERROR, "Only one glyph|glyphClass may be present per"
                               " LigatureCaret statement");
 
-    std::vector<uint16_t> sv(nv.size());
+    std::vector<uint16_t> sv;
+    sv.reserve(nv.size());
     for ( auto n: nv )
         sv.push_back(getNum<uint16_t>(TOK(n)->getText(), 10));
 
@@ -694,7 +716,7 @@ antlrcpp::Any FeatVisitor::visitOs_2(FeatParser::Os_2Context *ctx) {
         int16_t v = getNum<int16_t>(TOK(ctx->num)->getText(), 10);
         if ( ctx->TYPOASC() != nullptr )
             fc->g->font.TypoAscender = v;
-        else if ( ctx->TYPOASC() != nullptr )
+        else if ( ctx->TYPODESC() != nullptr )
             fc->g->font.TypoDescender = v;
         else if ( ctx->TYPOLINEGAP() != nullptr )
             fc->g->font.TypoLineGap = v;
@@ -718,12 +740,13 @@ antlrcpp::Any FeatVisitor::visitOs_2(FeatParser::Os_2Context *ctx) {
             OS_2SetWidthClass(fc->g, v);
         else if ( ctx->OS2_LOPS() != nullptr )
             OS_2LowerOpticalPointSize(fc->g, v);
-        else if ( ctx->OS2_UOPS() != nullptr )
-            OS_2UpperOpticalPointSize(fc->g, v);
         else {
-            assert( ctx->FAMCLASS() != nullptr );
-            OS_2FamilyClass(fc->g, v);
+            assert ( ctx->OS2_UOPS() != nullptr );
+            OS_2UpperOpticalPointSize(fc->g, v);
         }
+    } else if ( ctx->gnum != nullptr ) {
+        assert( ctx->FAMCLASS() != nullptr );
+        OS_2FamilyClass(fc->g, getNum<uint16_t>(TOK(ctx->gnum)->getText()));
     } else if ( ctx->STRVAL() != nullptr ) {
         assert( ctx->VENDOR() != nullptr );
         fc->addVendorString(TOK(ctx->STRVAL())->getText());
@@ -738,6 +761,7 @@ antlrcpp::Any FeatVisitor::visitOs_2(FeatParser::Os_2Context *ctx) {
         size_t s = std::min(ctx->NUM().size(), (size_t)kLenUnicodeList);
         for (size_t i=0; i<s; ++i)
             ur[i] = getNum<uint16_t>(TOK(ctx->NUM(i))->getText(), 10);
+        TOK(ctx->UNIRANGE());
         fc->setUnicodeRange((short *) ur.data());
     } else {
         assert( ctx->CODEPAGERANGE() != nullptr );
@@ -745,7 +769,8 @@ antlrcpp::Any FeatVisitor::visitOs_2(FeatParser::Os_2Context *ctx) {
         size_t s = std::min(ctx->NUM().size(), (size_t)kLenCodePageList);
         for (size_t i=0; i<s; ++i)
             cpr[i] = getNum<uint16_t>(TOK(ctx->NUM(i))->getText(), 10);
-        fc->setUnicodeRange((short *) cpr.data());
+        TOK(ctx->CODEPAGERANGE());
+        fc->setCodePageRange((short *) cpr.data());
     }
 
     return nullptr;
@@ -755,6 +780,7 @@ antlrcpp::Any FeatVisitor::visitTable_STAT(FeatParser::Table_STATContext *ctx) {
     EntryPoint tmp_ep = include_ep;
     include_ep = &FeatParser::statFile;
     if ( stage == vExtract ) {
+        fc->sawSTAT = true;
         fc->startTable(fc->str2tag(TOK(ctx->STAT(0))->getText()));
     }
 
@@ -799,7 +825,8 @@ antlrcpp::Any FeatVisitor::visitNameEntry(FeatParser::NameEntryContext *ctx) {
     for (size_t i = 0; i < ctx->genNum().size(); ++i)
         v[i] = getNum<uint16_t>(TOK(ctx->genNum(i))->getText());
 
-    if ( v[0] != HOT_NAME_MS_PLATFORM && v[0] != HOT_NAME_MAC_PLATFORM ) {
+    if ( ctx->genNum().size() > 0 &&
+         v[0] != HOT_NAME_MS_PLATFORM && v[0] != HOT_NAME_MAC_PLATFORM ) {
         TOK(ctx->genNum(0));
         fc->featMsg(hotERROR, "platform id must be %d or %d",
                     HOT_NAME_MS_PLATFORM, HOT_NAME_MAC_PLATFORM);
@@ -823,6 +850,10 @@ antlrcpp::Any FeatVisitor::visitAxisValue(FeatParser::AxisValueContext *ctx) {
         visitAxisValueStatement(i);
 
     if ( stage == vExtract ) {
+        if ( fc->stat.format == 0 )
+            fc->featMsg(hotERROR, "AxisValue missing location statement");
+        if ( fc->featNameID == 0 )
+            fc->featMsg(hotERROR, "AxisValue missing name entry");
         STATAddAxisValueTable(fc->g, fc->stat.format, fc->stat.axisTags.data(),
                               fc->stat.values.data(), fc->stat.values.size(),
                               fc->stat.flags, fc->featNameID,
@@ -880,7 +911,8 @@ antlrcpp::Any FeatVisitor::visitElidedFallbackName(FeatParser::ElidedFallbackNam
         visitNameEntryStatement(i);
 
     if ( stage == vExtract ) {
-        STATSetElidedFallbackNameID(fc->g, fc->featNameID);
+        if ( !STATSetElidedFallbackNameID(fc->g, fc->featNameID) )
+            fc->featMsg(hotERROR, "ElidedFallbackName already defined.");
         fc->featNameID = 0;
     }
     include_ep = tmp_ep;
@@ -931,12 +963,13 @@ antlrcpp::Any FeatVisitor::visitNameID(FeatParser::NameIDContext *ctx) {
     if ( fc->sawFeatNames && v[0] > 255) 
         fc->featMsg(hotFATAL, "name table should be defined before "
                               "GSUB featureNames with nameids above 255");
-    if ( v[1] != -1 && v[1] != HOT_NAME_MS_PLATFORM && v[1] != HOT_NAME_MAC_PLATFORM ) {
+    if ( ctx->genNum().size() > 1 && 
+         v[1] != HOT_NAME_MS_PLATFORM && v[1] != HOT_NAME_MAC_PLATFORM ) {
         TOK(ctx->genNum(1));
         fc->featMsg(hotFATAL, "platform id must be %d or %d",
                               HOT_NAME_MS_PLATFORM, HOT_NAME_MAC_PLATFORM);
     }
-    fc->addNameString(v[0], v[1], v[2], v[3], TOK(ctx->STRVAL())->getText());
+    fc->addNameString(v[1], v[2], v[3], v[0], TOK(ctx->STRVAL())->getText());
     return nullptr;
 }
 
@@ -970,7 +1003,6 @@ antlrcpp::Any FeatVisitor::visitVmtx(FeatParser::VmtxContext *ctx) {
 }
 
 antlrcpp::Any FeatVisitor::visitFeatureUse(FeatParser::FeatureUseContext *ctx) {
-    // std::cout << " FeatureUse ";
     if ( stage != vExtract )
         return nullptr;
 
@@ -986,9 +1018,11 @@ antlrcpp::Any FeatVisitor::visitScriptAssign(FeatParser::ScriptAssignContext *ct
 antlrcpp::Any FeatVisitor::visitLangAssign(FeatParser::LangAssignContext *ctx) {
     int lang_change = fc->startScriptOrLang(FeatCtx::languageTag, fc->str2tag(TOK(ctx->tag())->getText()));
 
-    bool old_format = false, include_dflt = false;
-    include_dflt = ( ctx->INCLUDE_dflt() || ctx->INCLUDE_DFLT() );
-    old_format = ( ctx->EXCLUDE_DFLT() || ctx->INCLUDE_DFLT() );
+    bool old_format = false, include_dflt = true;
+    if ( ctx->EXCLUDE_dflt() || ctx->EXCLUDE_DFLT() )
+        include_dflt = false;
+    if ( ctx->EXCLUDE_DFLT() || ctx->INCLUDE_DFLT() )
+        old_format = true;
    
     TOK(ctx); 
     if ( lang_change != -1 )
@@ -1024,13 +1058,14 @@ antlrcpp::Any FeatVisitor::visitSubstitute(FeatParser::SubstituteContext *ctx) {
     int type = 0;
 
     if ( ctx->EXCEPT() != nullptr ) {
+        type = GSUBChain;
         fc->syntax.numExcept++;
         for (auto i: ctx->lookupPattern()) {
             if ( i==ctx->startpat || i==ctx->endpat )
                 continue;
             targ = translateLookupPattern(i, true);
             targ->flags |= FEAT_IGNORE_CLAUSE;
-            fc->addSub(targ, nullptr, GSUBChain);
+            fc->addSub(targ, nullptr, type);
         }
     }
     if ( ctx->revtok() != nullptr ) {
@@ -1240,6 +1275,10 @@ antlrcpp::Any FeatVisitor::visitLookupflagAssign(FeatParser::LookupflagAssignCon
             v = fc->setLkpFlagAttribute(v, otlMarkAttachmentType, macIndex);
         }
     }
+    if ( ctx->lookupflagElement().size() == 0 ) {
+        assert( ctx->NUM() != nullptr );
+        v = getNum<uint16_t>(TOK(ctx->NUM())->getText(), 10);
+    }
     fc->setLkpFlag(v);
     return nullptr;
 }
@@ -1255,7 +1294,8 @@ antlrcpp::Any FeatVisitor::visitSizemenuname(FeatParser::SizemenunameContext *ct
     for (size_t i = 0; i < ctx->genNum().size(); ++i)
         v[i] = getNum<uint16_t>(TOK(ctx->genNum(i))->getText());
 
-    if ( v[0] != HOT_NAME_MS_PLATFORM && v[0] != HOT_NAME_MAC_PLATFORM ) {
+    if ( ctx->genNum().size() > 0 &&
+         v[0] != HOT_NAME_MS_PLATFORM && v[0] != HOT_NAME_MAC_PLATFORM ) {
         TOK(ctx->genNum(0));
         fc->featMsg(hotERROR, "platform id must be %d or %d",
                     HOT_NAME_MS_PLATFORM, HOT_NAME_MAC_PLATFORM);
@@ -1283,6 +1323,7 @@ antlrcpp::Any FeatVisitor::visitParameters(FeatParser::ParametersContext *ctx) {
         fc->featMsg(hotERROR, "Too many parameter values.");
         s = MAX_FEAT_PARAM_NUM;
     }
+    fc->featNameID = 0;
     std::vector<uint16_t> p(s);
     for (size_t i=0; i<s; ++i)
         p[i] = getFixed<uint16_t>(ctx->fixedNum(i), true);
@@ -1305,10 +1346,10 @@ bool FeatVisitor::translateAnchor(FeatParser::AnchorContext *ctx, int componentI
     FeatCtx::AnchorDef a;
 
     if ( ctx->KNULL() != nullptr ) {
-        fc->addAnchorByValue(a, true);
+        fc->addAnchorByValue(a, true, componentIndex);
         return true;
     } else if ( ctx->name != NULL ) {
-        fc->addAnchorByName(TOK(ctx->name)->getText());
+        fc->addAnchorByName(TOK(ctx->name)->getText(), componentIndex);
     } else {
         assert( ctx->xval != nullptr && ctx->yval != nullptr );
         a.x = getNum<int16_t>(TOK(ctx->xval)->getText(), 10);
@@ -1317,7 +1358,7 @@ bool FeatVisitor::translateAnchor(FeatParser::AnchorContext *ctx, int componentI
             a.contourpoint = getNum<uint16_t>(TOK(ctx->cp)->getText(), 10);
             a.hasContour = true;
         }
-        fc->addAnchorByValue(a, false);
+        fc->addAnchorByValue(a, false, componentIndex);
     }
     return false;
 }
@@ -1343,8 +1384,8 @@ GNode *FeatVisitor::translateLookupPattern(FeatParser::LookupPatternContext *ctx
     for (auto &pe : ctx->lookupPatternElement()) {
         *insert = translateLookupPatternElement(pe, markedOK);
         if ( (*insert)->flags & FEAT_LOOKUP_NODE ) {
-            ret->flags |= FEAT_LOOKUP_NODE;
             (*insert)->flags &= ~FEAT_LOOKUP_NODE;
+            ret->flags |= FEAT_LOOKUP_NODE;
         }
         insert = &(*insert)->nextSeq;
     }
@@ -1471,7 +1512,8 @@ void FeatVisitor::addGcLiteralToCurrentGC(FeatParser::GcLiteralContext *ctx) {
                     auto gn = TOK(g->glyphName())->getText();
                     auto hpos = gn.find('-');
                     if ( hpos == std::string::npos ) {
-                        fc->featMsg(hotFATAL, "incomplete glyph range or glyph not in font");
+                        gid = getGlyph(g, false); // For error
+                        assert ( gid == GID_NOTDEF );
                         return;
                     }
                     auto sgname = gn.substr(0, hpos);
@@ -1493,7 +1535,6 @@ GID FeatVisitor::getGlyph(FeatParser::GlyphContext *ctx, bool allowNotDef) {
         return fc->cid2gid(TOK(ctx->CID())->getText());
     else {
         assert( ctx->glyphName() != nullptr );
-        std::cout << ctx->glyphName()->getText() << std::endl << std::flush;
         return fc->mapGName2GID(TOK(ctx->glyphName())->getText(), allowNotDef);
     }
 }
@@ -1515,15 +1556,17 @@ T FeatVisitor::getNum(const std::string &str, int base) {
 
 template <typename T>
 T FeatVisitor::getFixed(FeatParser::FixedNumContext *ctx, bool param) {
-    float mult = param ? 10.0 : 65536.0;
+    float mult = param ? 1.0 : 65536.0;
 
     if ( ctx->NUM() != nullptr )
-        return (T) getNum<T>(TOK(ctx->NUM())->getText(), 10);
+        return (T) mult * getNum<T>(TOK(ctx->NUM())->getText(), 10);
+
+    mult = param ? 10.0 : 65536.0;
 
     assert( ctx->POINTNUM() != nullptr );
     auto str = TOK(ctx->POINTNUM())->getText();
     char *end;
-    long v = (long)(0.5 + mult*strtod(str.c_str(), &end));
+    long v = (long)floor(0.5 + mult*strtod(str.c_str(), &end));
     if ( end == str.c_str() )
         fc->featMsg(hotERROR, "Could not parse numeric string");
 

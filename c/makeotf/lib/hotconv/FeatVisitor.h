@@ -32,9 +32,10 @@ class FeatVisitor : public FeatParserBaseVisitor {
         FeatVisitor(FeatCtx *fc, const char *pathname,
                     FeatVisitor *parent = nullptr,
                     FeatParser::IncludeContext *parent_ctx = nullptr,
-                    EntryPoint ep = &FeatParser::file)
+                    EntryPoint ep = &FeatParser::file,
+                    int depth = 0)
                     : fc(fc), pathname(pathname), parent(parent),
-                      parent_ctx(parent_ctx), top_ep(ep) { }
+                      parent_ctx(parent_ctx), top_ep(ep), depth(depth) { }
         virtual ~FeatVisitor();
 
         void Parse(bool do_includes = true);
@@ -182,6 +183,7 @@ class FeatVisitor : public FeatParserBaseVisitor {
         std::vector<FeatVisitor *> includes;
         size_t current_include {0};
         EntryPoint top_ep, include_ep;
+        int depth;
         bool need_file_msg {true};
 
         bool all_includes_parse {true};

@@ -258,7 +258,7 @@ class FeatCtx {
             std::vector<Fixed> values;
             Fixed min, max;
         } stat;
-        bool axistag_vert {false};
+        bool axistag_vert {false}, sawBASEvert {false}, sawBASEhoriz {false};
         size_t axistag_count {0};
         antlr4::Token *axistag_token {nullptr};
         FeatVisitor *axistag_visitor {nullptr};
@@ -292,8 +292,8 @@ class FeatCtx {
         std::vector<AnchorMarkInfo> anchorMarkInfo;
         std::vector<GNode *> markClasses;
         void addAnchorDef(const std::string &name, const AnchorDef &a);
-        void addAnchorByName(const std::string &name);
-        void addAnchorByValue(const AnchorDef &a, bool isNull);
+        void addAnchorByName(const std::string &name, int componentIndex);
+        void addAnchorByValue(const AnchorDef &a, bool isNull, int componentIndex);
         void addMark(const std::string &name, GNode *targ);
 
         // Metrics

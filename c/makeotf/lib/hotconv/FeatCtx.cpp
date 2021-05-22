@@ -379,6 +379,8 @@ GID FeatCtx::mapGName2GID(const char *gname, bool allowNotdef) {
     // if (IS_CID(g)) {
     //     zzerr("glyph name specified for a CID font");
     // }
+    if ( gname[0] == '\\' )
+        gname++;
 
     gid = mapName2GID(g, gname, &realname);
 
@@ -528,8 +530,12 @@ void FeatCtx::resetCurrentGC() {
 
 void FeatCtx::defineCurrentGC(const std::string &gcname) {
     resetCurrentGC();
-    // XXX probably shouldn't be assertion
-    assert( namedGlyphClasses.find(gcname) == namedGlyphClasses.end() );
+    auto search = namedGlyphClasses.find(gcname);
+    if ( search != namedGlyphClasses.end() ) {
+        featMsg(hotWARNING, "Glyph class %s redefined", gcname.c_str());
+        recycleNodes(search->second);
+        namedGlyphClasses.erase(search);
+    }
     curGCName = gcname;
 }
 
@@ -949,8 +955,8 @@ int FeatCtx::startScriptOrLang(TagType type, Tag tag) {
         fFlags &= ~langSysMode;
 
         if (tag != curr.script) {
-            if (!tagAssign(tag, scriptTag, true))
-                ; // zzerr("script behavior already specified");
+            if ( !tagAssign(tag, scriptTag, true) )
+                featMsg(hotERROR, "script behavior already specified");
 
             language.clear();
             DFLTLkps.clear(); /* reset the script-specific default list to 0 */
@@ -1224,7 +1230,7 @@ void FeatCtx::endLookup() {
 
     NamedLkp *c = lab2NamedLkp(currNamedLkp);
 
-    if (c == NULL) {
+    if (c == nullptr) {
         featMsg(hotFATAL, "[internal] label not found\n");
     }
     DF(2, (stderr, "# at end of named lookup %s\n", c->name.c_str()));
@@ -1422,7 +1428,7 @@ Label FeatCtx::getNextNamedLkpLabel(const std::string &str, bool isa) {
                 FEAT_NAMED_LKP_END + 1);
     }
     namedLkp.push_back({str, isa});
-    return namedLkp.size();
+    return namedLkp.size()-1;
 }
 
 Label FeatCtx::getLabelIndex(const std::string &name) {
@@ -1643,17 +1649,17 @@ void FeatCtx::addAnchorDef(const std::string &name, const AnchorDef &a) {
         featMsg(hotFATAL, "Named anchor definition '%s' is a a duplicate of an earlier named anchor definition.", name.c_str());
 }
 
-void FeatCtx::addAnchorByName(const std::string &name) {
+void FeatCtx::addAnchorByName(const std::string &name, int componentIndex) {
     auto search = anchorDefs.find(name);
     if ( search == anchorDefs.end() ) {
         featMsg(hotERROR, "Named anchor reference '%s' is not in list of named anchors.", name.c_str());
         return;
     }
 
-    addAnchorByValue(search->second, false);
+    addAnchorByValue(search->second, false, componentIndex);
 }
 
-void FeatCtx::addAnchorByValue(const AnchorDef &a, bool isNull) {
+void FeatCtx::addAnchorByValue(const AnchorDef &a, bool isNull, int componentIndex) {
     AnchorMarkInfo am;
     initAnchor(&am);
     am.x = a.x;
@@ -1666,6 +1672,7 @@ void FeatCtx::addAnchorByValue(const AnchorDef &a, bool isNull) {
     } else {
         am.format = 1;
     }
+    am.componentIndex = componentIndex;
     anchorMarkInfo.push_back(am);
 }
 
@@ -2307,7 +2314,7 @@ void FeatCtx::addGPOS(int lkpType, GNode *targ, int anchorCount, const AnchorMar
     prepRule(GPOS_, (targ->flags & FEAT_HAS_MARKED) ? GPOSChain : lkpType, targ, NULL);
 
     char *locDesc;
-    current_visitor->tokenPositionMsg(&locDesc);
+    current_visitor->tokenPositionMsg(&locDesc, true);
     GPOSRuleAdd(g, lkpType, targ, locDesc, anchorCount, ami);
     MEM_FREE(g, locDesc);
 
@@ -2644,8 +2651,12 @@ void FeatCtx::addCVNameID(int labelID) {
         }
 
         case kCVParameterLabelEnum: {
+            if ( cvParameters.FirstParamUILabelNameID == 0 )
+                cvParameters.FirstParamUILabelNameID = featNameID;
+            else if ( cvParameters.FirstParamUILabelNameID + 
+                      cvParameters.NumNamedParameters != featNameID )
+                featMsg(hotERROR, "Character variant AParamUILabelNameID statements must be contiguous.");
             cvParameters.NumNamedParameters++;
-            cvParameters.FirstParamUILabelNameID = featNameID;
             break;
         }
     }
@@ -2889,12 +2900,8 @@ void FeatCtx::aaltAddAlternates(GNode *targ, GNode *repl) {
             GNode *p;
 
             auto it = std::find(std::begin(aalt.features), std::end(aalt.features), curr.feature);
-            assert( it != std::end(aalt.features) );
-
+            short aaltTagIndex = it != std::end(aalt.features) ? it - aalt.features.begin() : -1;
             if (glyphInClass(replace->gid, &ri.repl, &lastClass)) {
-                short aaltTagIndex;
-
-                aaltTagIndex = it - aalt.features.begin();
                 p = *lastClass;
 
                 if ( aaltTagIndex < p->aaltIndex ) {
@@ -2907,7 +2914,7 @@ void FeatCtx::aaltAddAlternates(GNode *targ, GNode *repl) {
                 if (curr.feature == aalt_) {
                     p->aaltIndex = AALT_INDEX;
                 } else {
-                    p->aaltIndex = it - aalt.features.begin();
+                    p->aaltIndex = aaltTagIndex;
                 }
             }
         }

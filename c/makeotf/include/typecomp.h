@@ -33,10 +33,12 @@ tcCtx tcNew(tcCallbacks *cb);
    tcCallbacks data structure whose fields are described below. Optional fields
    should be passed with a NULL value if not required. */
 
-/* Message types (for use with message callback) */
+/* Message types (for use with message callback, adatpted from hotconv.h) */
+
 enum {
-    tcNOTE = 0,
-    tcWARNING = 1,
+    tcHEADING,
+    tcNOTE,
+    tcWARNING,
     tcERROR,
     tcFATAL
 };

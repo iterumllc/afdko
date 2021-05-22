@@ -105,7 +105,7 @@ void ctuGetVersion(ctlVersionCallbacks *cb);
 /* ctuGetVersion() returns the library version number and name via the client
    callbacks passed with the "cb" parameter (see ctlshare.h). */
 
-#if !defined(_UCRT)
+#if !defined(_UCRT) && !defined(__cplusplus)
 float roundf(float x);
 #endif
 

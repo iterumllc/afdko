@@ -1,3 +1,10 @@
+/* Copyright 2021 Adobe Systems Incorporated (http://www.adobe.com/). All Rights Reserved.
+ * This software is licensed as OpenSource, under the Apache License, Version 2.0.
+ * This license is available at: http://opensource.org/licenses/Apache-2.0.
+ */
+
+// ------------------------- Feature file grammar ---------------------------
+
 parser grammar FeatParser;
 
 options { tokenVocab = FeatLexer; }
@@ -11,69 +18,13 @@ file:
     )* EOF
 ;
 
-// For include directive in a block with statements
-
-featureFile:
-    featureStatement* EOF
-;
-
-statementFile:
-    statement* EOF
-;
-
-cvStatementFile:
-    cvParameterStatement* EOF
-;
-
-baseFile:
-    baseStatement* EOF
-;
-
-hheaFile:
-    hheaStatement* EOF
-;
-
-vheaFile:
-    vheaStatement* EOF
-;
-
-// For include directive in GDEF table
-gdefFile:
-    gdefStatement* EOF
-;
-
-// For include directive in name table
-nameFile:
-    nameStatement* EOF
-;
-
-vmtxFile:
-    vmtxStatement* EOF
-;
-
-os_2File:
-    os_2Statement* EOF
-;
-
-statFile:
-    statStatement* EOF
-;
-
-axisValueFile:
-    axisValueStatement* EOF
-;
-
-nameEntryFile:
-    nameEntryStatement* EOF
-;
-
 topLevelStatement:
-    ( glyphClassAssign
+    ( include
+    | glyphClassAssign
     | langsysAssign
     | mark_statement
     | anchorDef
     | valueRecordDef
-    | include
     )
     SEMI
 ;
@@ -82,20 +33,44 @@ include:
     INCLUDE I_RPAREN IFILE I_LPAREN
 ;
 
+glyphClassAssign:
+    GCLASS EQUALS glyphClass
+;
+
 langsysAssign:
     LANGSYS script=tag lang=tag
 ;
 
+mark_statement:
+    MARK_CLASS ( glyph | glyphClass ) anchor GCLASS
+;
+
+anchorDef:
+    ANCHOR_DEF xval=NUM yval=NUM ( CONTOURPOINT cp=NUM )? name=label
+;
+
 valueRecordDef:
-    VALUERECORDDEF valueLiteral label
+    VALUE_RECORD_DEF valueLiteral label
 ;
 
-valueRecord:
-    BEGINVALUE valuename=label ENDVALUE | valueLiteral
+featureBlock:
+    FEATURE starttag=tag USE_EXTENSION? LCBRACE
+    featureStatement+
+    RCBRACE endtag=tag SEMI
 ;
 
-valueLiteral:
-    ( BEGINVALUE NUM NUM NUM NUM ENDVALUE ) | NUM
+tableBlock:
+    TABLE
+    ( table_BASE
+    | table_GDEF
+    | table_head
+    | table_hhea
+    | table_vhea
+    | table_name
+    | table_OS_2
+    | table_STAT
+    | table_vmtx
+    )
 ;
 
 anonBlock:
@@ -103,27 +78,40 @@ anonBlock:
 ;
 
 lookupBlockTopLevel:
-    LOOKUP startlabel=label USEEXTENSION? LCBRACE
+    LOOKUP startlabel=label USE_EXTENSION? LCBRACE
     statement+
     RCBRACE endlabel=label SEMI
-;
-
-lookupBlockOrUse:
-    LOOKUP startlabel=label ( USEEXTENSION? LCBRACE
-    statement+
-    RCBRACE endlabel=label )? SEMI
-;
-
-featureBlock:
-    FEATURE starttag=tag USEEXTENSION? LCBRACE
-    featureStatement+
-    RCBRACE endtag=tag SEMI
 ;
 
 featureStatement:
       statement
     | lookupBlockOrUse
     | cvParameterBlock
+;
+
+lookupBlockOrUse:
+    LOOKUP startlabel=label ( USE_EXTENSION? LCBRACE
+    statement+
+    RCBRACE endlabel=label )? SEMI
+;
+
+cvParameterBlock:
+    CV_PARAMETERS LCBRACE
+    cvParameterStatement*
+    RCBRACE SEMI
+;
+
+cvParameterStatement:
+    ( cvParameter
+    | include
+    ) SEMI
+;   
+
+cvParameter:
+      ( CV_UI_LABEL | CV_TOOLTIP | CV_SAMPLE_TEXT | CV_PARAM_LABEL ) LCBRACE
+      nameEntryStatement+
+      RCBRACE
+    | CV_CHARACTER genNum
 ;
 
 statement:
@@ -153,7 +141,7 @@ scriptAssign:
 ;
 
 langAssign:
-    LANG tag ( EXCLUDE_DFLT | INCLUDE_DFLT | EXCLUDE_dflt | INCLUDE_dflt | )
+    LANGUAGE tag ( EXCLUDE_DFLT | INCLUDE_DFLT | EXCLUDE_dflt | INCLUDE_dflt )?
 ;
 
 lookupflagAssign:
@@ -161,9 +149,12 @@ lookupflagAssign:
 ;
 
 lookupflagElement:
-      RIGHTTOLEFT | IGNOREBASEGLYPHS | IGNORELIGATURES | IGNOREMARKS
-    | ( MARKATTACHMENTTYPE glyphClass )
-    | ( USEMARKFILTERINGSET glyphClass )
+      RIGHT_TO_LEFT
+    | IGNORE_BASE_GLYPHS
+    | IGNORE_LIGATURES
+    | IGNORE_MARKS
+    | ( MARK_ATTACHMENT_TYPE glyphClass )
+    | ( USE_MARK_FILTERING_SET glyphClass )
 ;
 
 ignoreSubOrPos:
@@ -172,8 +163,8 @@ ignoreSubOrPos:
 
 substitute:
     ( EXCEPT lookupPattern ( COMMA lookupPattern )* )?
-    ( revtok startpat=lookupPattern ( BY ( KNULL | endpat=lookupPattern ) )?
-    | subtok startpat=lookupPattern ( ( BY | FROM ) ( KNULL | endpat=lookupPattern ) )? )
+    (   revtok startpat=lookupPattern ( BY ( KNULL | endpat=lookupPattern ) )?
+      | subtok startpat=lookupPattern ( ( BY | FROM ) ( KNULL | endpat=lookupPattern ) )? )
 ;
 
 position:
@@ -192,6 +183,14 @@ valuePattern:
     patternElement valueRecord?
 ;
 
+valueRecord:
+    BEGINVALUE valuename=label ENDVALUE | valueLiteral
+;
+
+valueLiteral:
+    ( BEGINVALUE NUM NUM NUM NUM ENDVALUE ) | NUM
+;
+
 cursiveElement:
     patternElement anchor anchor
 ;
@@ -201,58 +200,25 @@ baseToMarkElement:
 ;
 
 ligatureMarkElement:
-    anchor ( MARK GCLASS )? LIGATURECOMPONENT? MARKER?
-;
-
-mark_statement:
-    MARKCLASS ( glyph | glyphClass ) anchor GCLASS
-;
-
-featureNames:
-    FEATNAMES LCBRACE
-    nameEntryStatement+
-    RCBRACE
-;
-
-subtable:
-    SUBTABLE
+    anchor ( MARK GCLASS )? LIG_COMPONENT? MARKER?
 ;
 
 parameters:
     PARAMETERS fixedNum+
 ;
 
-cvParameterBlock:
-    CVPARAMETERS LCBRACE
-    cvParameterStatement*
-    RCBRACE SEMI
+sizemenuname:
+    SIZEMENUNAME ( genNum ( genNum genNum )? )? QUOTE STRVAL EQUOTE
 ;
 
-cvParameterStatement: // No longer enforcing ordering
-    ( cvParameter
-    | include
-    ) SEMI
-;   
-
-cvParameter:
-      ( CVUILABEL | CVTOOLTIP | CVSAMPLETEXT | CVPARAMLABEL ) LCBRACE
-      nameEntryStatement+
-      RCBRACE
-    | CVCHARACTER genNum
+featureNames:
+    FEATURE_NAMES LCBRACE
+    nameEntryStatement+
+    RCBRACE
 ;
 
-tableBlock:
-    TABLE
-    ( table_BASE
-    | table_GDEF
-    | table_head
-    | table_hhea
-    | table_vhea
-    | table_OS_2
-    | table_STAT
-    | table_name
-    | table_vmtx
-    )
+subtable:
+    SUBTABLE
 ;
 
 table_BASE:
@@ -296,10 +262,10 @@ gdefStatement:
 ;
 
 gdefGlyphClass:
-    GCD glyphClassOptional COMMA
-        glyphClassOptional COMMA
-        glyphClassOptional COMMA
-        glyphClassOptional
+    GLYPH_CLASS_DEF glyphClassOptional COMMA
+                    glyphClassOptional COMMA
+                    glyphClassOptional COMMA
+                    glyphClassOptional
 ;
 
 gdefAttach:
@@ -307,16 +273,16 @@ gdefAttach:
 ;
 
 gdefLigCaretPos:
-    LIGCARETPOS lookupPattern NUM+
+    LIG_CARET_BY_POS lookupPattern NUM+
 ;
     
 gdefLigCaretIndex:
-    LIGCARETIDX lookupPattern NUM+
+    LIG_CARET_BY_IDX lookupPattern NUM+
 ;
 
 table_head:
     HEAD LCBRACE
-    ( FONTREV POINTNUM | ) SEMI
+    ( FONT_REVISION POINTNUM )? SEMI
     RCBRACE HEAD SEMI
 ;
 
@@ -333,7 +299,7 @@ hheaStatement:
 ;
 
 hhea:
-    ( CARETOFF | ASCENDER | DESCENDER | LINEGAP ) NUM
+    ( CARET_OFFSET | ASCENDER | DESCENDER | LINE_GAP ) NUM
 ;
 
 table_vhea:
@@ -349,7 +315,7 @@ vheaStatement:
 ;
 
 vhea:
-    ( VASCENDER | VDESCENDER | VLINEGAP ) NUM
+    ( VERT_TYPO_ASCENDER | VERT_TYPO_DESCENDER | VERT_TYPO_LINE_GAP ) NUM
 ;
 
 table_name:
@@ -360,28 +326,12 @@ table_name:
 
 nameStatement:
     ( nameID
-    | include )
-    SEMI
+    | include
+    ) SEMI
 ;
 
 nameID:
     NAMEID id=genNum ( plat=genNum ( spec=genNum lang=genNum )? )? QUOTE STRVAL EQUOTE
-;
-
-table_vmtx:
-    VMTX LCBRACE
-    vmtxStatement+
-    RCBRACE VMTX SEMI
-;
-
-vmtxStatement:
-    ( vmtx
-    | include )
-    SEMI
-;
-
-vmtx:
-    ( VERTORIY | VERTADVY ) glyph NUM
 ;
 
 table_OS_2:
@@ -397,15 +347,15 @@ os_2Statement:
 ;
 
 os_2:
-      ( TYPOASC | TYPODESC | TYPOLINEGAP | WINASC | WINDESC
-      | XHEIGHT | CAPHEIGHT ) num=NUM
+      ( TYPO_ASCENDER | TYPO_DESCENDER | TYPO_LINE_GAP 
+      | WIN_ASCENT | WIN_DESCENT | X_HEIGHT | CAP_HEIGHT ) num=NUM
     |
-      ( FSTYPE | FSTYPE2 | WEIGHTCLASS | WIDTHCLASS
-      | OS2_LOPS | OS2_UOPS ) unum=NUM
-    | FAMCLASS gnum=genNum
+      ( FS_TYPE | FS_TYPE_v | WEIGHT_CLASS | WIDTH_CLASS
+      | OS2_LOWER_OP_SIZE | OS2_UPPER_OP_SIZE ) unum=NUM
+    | FAMILY_CLASS gnum=genNum
     | VENDOR QUOTE STRVAL EQUOTE
     | PANOSE NUM NUM NUM NUM NUM NUM NUM NUM NUM NUM
-    | ( UNIRANGE | CODEPAGERANGE ) NUM+
+    | ( UNICODE_RANGE | CODE_PAGE_RANGE ) NUM+
 ;
     
 
@@ -425,13 +375,13 @@ statStatement:
 ;
 
 designAxis:
-    DESIGNAXIS tag NUM LCBRACE
+    DESIGN_AXIS tag NUM LCBRACE
     nameEntryStatement+
     RCBRACE
 ;
 
 axisValue:
-    AXISVALUE LCBRACE
+    AXIS_VALUE LCBRACE
     axisValueStatement+
     RCBRACE
 ;
@@ -453,7 +403,7 @@ axisValueFlags:
 ;
 
 elidedFallbackName:
-    ELIDFALLNAME LCBRACE
+    ELIDED_FALLBACK_NAME LCBRACE
     nameEntryStatement+
     RCBRACE
 ;
@@ -465,19 +415,27 @@ nameEntryStatement:
 ;
 
 elidedFallbackNameID:
-    ELIDFALLNAMEID genNum
+    ELIDED_FALLBACK_NAME_ID genNum
 ;
 
 nameEntry:
     NAME ( genNum ( genNum genNum )? )? QUOTE STRVAL EQUOTE
 ;
 
-sizemenuname:
-    SIZEMENUNAME ( genNum ( genNum genNum )? )? QUOTE STRVAL EQUOTE
+table_vmtx:
+    VMTX LCBRACE
+    vmtxStatement+
+    RCBRACE VMTX SEMI
 ;
 
-anchorDef:
-    ANCHORDEF xval=NUM yval=NUM ( CONTOURPOINT cp=NUM )? name=label
+vmtxStatement:
+    ( vmtx
+    | include
+    ) SEMI
+;
+
+vmtx:
+    ( VERT_ORIGIN_Y | VERT_ADVANCE_Y ) glyph NUM
 ;
 
 anchor:
@@ -504,12 +462,8 @@ patternElement:
     ( glyphClass | glyph ) MARKER?
 ;
 
-glyphClassAssign:
-    GCLASS EQUALS glyphClass
-;
-
 glyphClassOptional:
-    glyphClass |
+    glyphClass?
 ;
 
 glyphClass:
@@ -520,11 +474,8 @@ gcLiteral:
     LBRACKET gcLiteralElement+ RBRACKET
 ;
 
-// The gcLiteral/glyphOrRange grammar parses "a - z" as startg=a and endg=z.
-// In contrast "a-z" is parsed as startg=a-z. The latter must be handled when
-// walking the tree.
 gcLiteralElement:
-    startg=glyph ( HYPHEN endg=glyph )?
+      startg=glyph ( HYPHEN endg=glyph )?
     | GCLASS
 ;
 
@@ -542,7 +493,7 @@ label: // XXX add conditional keywords
 ;
 
 tag:
-    NAMELABEL | EXTNAME | CATCHTAG | MARK // XXX MARK probably against spec
+    NAMELABEL | EXTNAME | CATCHTAG | MARK     // MARK included for "feature mark"
 ;
 
 fixedNum:
@@ -553,26 +504,85 @@ genNum:
     NUM | NUMOCT | NUMEXT
 ;
 
+// These are for an include directive in a block with statements
+
+featureFile:
+    featureStatement* EOF
+;
+
+statementFile:
+    statement* EOF
+;
+
+cvStatementFile:
+    cvParameterStatement* EOF
+;
+
+baseFile:
+    baseStatement* EOF
+;
+
+hheaFile:
+    hheaStatement* EOF
+;
+
+vheaFile:
+    vheaStatement* EOF
+;
+
+gdefFile:
+    gdefStatement* EOF
+;
+
+nameFile:
+    nameStatement* EOF
+;
+
+vmtxFile:
+    vmtxStatement* EOF
+;
+
+os_2File:
+    os_2Statement* EOF
+;
+
+statFile:
+    statStatement* EOF
+;
+
+axisValueFile:
+    axisValueStatement* EOF
+;
+
+nameEntryFile:
+    nameEntryStatement* EOF
+;
+
+/* These tokens are defined this way because they slightly improves 
+ * Antlr 4's default error reporting.  If we wind up overloading the
+ * class with the token literals at the C++ level I will devolve these
+ * back into the Lexer grammar.
+ */
 subtok:
-    SUB | SUBV
+    SUBSTITUTE | SUBSTITUTE_v
 ;
 
 revtok:
-    REV | REVV
+    REVERSE | REVERSE_v
 ;
 
 anontok:
-    ANON | ANONV
+    ANON | ANON_v
 ;
 
 enumtok:
-    ENUM | ENUMV
+    ENUMERATE | ENUMERATE_v
 ;
 
 postok:
-    POSITION | POSITIONV
+    POSITION | POSITION_v
 ;
 
 markligtok:
-    MARKLIG | MARKLIGV
+    MARKLIG | MARKLIG_v
 ;

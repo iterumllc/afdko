@@ -21,53 +21,37 @@ public:
    */
     virtual antlrcpp::Any visitFile(FeatParser::FileContext *context) = 0;
 
-    virtual antlrcpp::Any visitFeatureFile(FeatParser::FeatureFileContext *context) = 0;
-
-    virtual antlrcpp::Any visitStatementFile(FeatParser::StatementFileContext *context) = 0;
-
-    virtual antlrcpp::Any visitCvStatementFile(FeatParser::CvStatementFileContext *context) = 0;
-
-    virtual antlrcpp::Any visitBaseFile(FeatParser::BaseFileContext *context) = 0;
-
-    virtual antlrcpp::Any visitHheaFile(FeatParser::HheaFileContext *context) = 0;
-
-    virtual antlrcpp::Any visitVheaFile(FeatParser::VheaFileContext *context) = 0;
-
-    virtual antlrcpp::Any visitGdefFile(FeatParser::GdefFileContext *context) = 0;
-
-    virtual antlrcpp::Any visitNameFile(FeatParser::NameFileContext *context) = 0;
-
-    virtual antlrcpp::Any visitVmtxFile(FeatParser::VmtxFileContext *context) = 0;
-
-    virtual antlrcpp::Any visitOs_2File(FeatParser::Os_2FileContext *context) = 0;
-
-    virtual antlrcpp::Any visitStatFile(FeatParser::StatFileContext *context) = 0;
-
-    virtual antlrcpp::Any visitAxisValueFile(FeatParser::AxisValueFileContext *context) = 0;
-
-    virtual antlrcpp::Any visitNameEntryFile(FeatParser::NameEntryFileContext *context) = 0;
-
     virtual antlrcpp::Any visitTopLevelStatement(FeatParser::TopLevelStatementContext *context) = 0;
 
     virtual antlrcpp::Any visitInclude(FeatParser::IncludeContext *context) = 0;
 
+    virtual antlrcpp::Any visitGlyphClassAssign(FeatParser::GlyphClassAssignContext *context) = 0;
+
     virtual antlrcpp::Any visitLangsysAssign(FeatParser::LangsysAssignContext *context) = 0;
+
+    virtual antlrcpp::Any visitMark_statement(FeatParser::Mark_statementContext *context) = 0;
+
+    virtual antlrcpp::Any visitAnchorDef(FeatParser::AnchorDefContext *context) = 0;
 
     virtual antlrcpp::Any visitValueRecordDef(FeatParser::ValueRecordDefContext *context) = 0;
 
-    virtual antlrcpp::Any visitValueRecord(FeatParser::ValueRecordContext *context) = 0;
+    virtual antlrcpp::Any visitFeatureBlock(FeatParser::FeatureBlockContext *context) = 0;
 
-    virtual antlrcpp::Any visitValueLiteral(FeatParser::ValueLiteralContext *context) = 0;
+    virtual antlrcpp::Any visitTableBlock(FeatParser::TableBlockContext *context) = 0;
 
     virtual antlrcpp::Any visitAnonBlock(FeatParser::AnonBlockContext *context) = 0;
 
     virtual antlrcpp::Any visitLookupBlockTopLevel(FeatParser::LookupBlockTopLevelContext *context) = 0;
 
+    virtual antlrcpp::Any visitFeatureStatement(FeatParser::FeatureStatementContext *context) = 0;
+
     virtual antlrcpp::Any visitLookupBlockOrUse(FeatParser::LookupBlockOrUseContext *context) = 0;
 
-    virtual antlrcpp::Any visitFeatureBlock(FeatParser::FeatureBlockContext *context) = 0;
+    virtual antlrcpp::Any visitCvParameterBlock(FeatParser::CvParameterBlockContext *context) = 0;
 
-    virtual antlrcpp::Any visitFeatureStatement(FeatParser::FeatureStatementContext *context) = 0;
+    virtual antlrcpp::Any visitCvParameterStatement(FeatParser::CvParameterStatementContext *context) = 0;
+
+    virtual antlrcpp::Any visitCvParameter(FeatParser::CvParameterContext *context) = 0;
 
     virtual antlrcpp::Any visitStatement(FeatParser::StatementContext *context) = 0;
 
@@ -89,27 +73,23 @@ public:
 
     virtual antlrcpp::Any visitValuePattern(FeatParser::ValuePatternContext *context) = 0;
 
+    virtual antlrcpp::Any visitValueRecord(FeatParser::ValueRecordContext *context) = 0;
+
+    virtual antlrcpp::Any visitValueLiteral(FeatParser::ValueLiteralContext *context) = 0;
+
     virtual antlrcpp::Any visitCursiveElement(FeatParser::CursiveElementContext *context) = 0;
 
     virtual antlrcpp::Any visitBaseToMarkElement(FeatParser::BaseToMarkElementContext *context) = 0;
 
     virtual antlrcpp::Any visitLigatureMarkElement(FeatParser::LigatureMarkElementContext *context) = 0;
 
-    virtual antlrcpp::Any visitMark_statement(FeatParser::Mark_statementContext *context) = 0;
+    virtual antlrcpp::Any visitParameters(FeatParser::ParametersContext *context) = 0;
+
+    virtual antlrcpp::Any visitSizemenuname(FeatParser::SizemenunameContext *context) = 0;
 
     virtual antlrcpp::Any visitFeatureNames(FeatParser::FeatureNamesContext *context) = 0;
 
     virtual antlrcpp::Any visitSubtable(FeatParser::SubtableContext *context) = 0;
-
-    virtual antlrcpp::Any visitParameters(FeatParser::ParametersContext *context) = 0;
-
-    virtual antlrcpp::Any visitCvParameterBlock(FeatParser::CvParameterBlockContext *context) = 0;
-
-    virtual antlrcpp::Any visitCvParameterStatement(FeatParser::CvParameterStatementContext *context) = 0;
-
-    virtual antlrcpp::Any visitCvParameter(FeatParser::CvParameterContext *context) = 0;
-
-    virtual antlrcpp::Any visitTableBlock(FeatParser::TableBlockContext *context) = 0;
 
     virtual antlrcpp::Any visitTable_BASE(FeatParser::Table_BASEContext *context) = 0;
 
@@ -153,12 +133,6 @@ public:
 
     virtual antlrcpp::Any visitNameID(FeatParser::NameIDContext *context) = 0;
 
-    virtual antlrcpp::Any visitTable_vmtx(FeatParser::Table_vmtxContext *context) = 0;
-
-    virtual antlrcpp::Any visitVmtxStatement(FeatParser::VmtxStatementContext *context) = 0;
-
-    virtual antlrcpp::Any visitVmtx(FeatParser::VmtxContext *context) = 0;
-
     virtual antlrcpp::Any visitTable_OS_2(FeatParser::Table_OS_2Context *context) = 0;
 
     virtual antlrcpp::Any visitOs_2Statement(FeatParser::Os_2StatementContext *context) = 0;
@@ -187,9 +161,11 @@ public:
 
     virtual antlrcpp::Any visitNameEntry(FeatParser::NameEntryContext *context) = 0;
 
-    virtual antlrcpp::Any visitSizemenuname(FeatParser::SizemenunameContext *context) = 0;
+    virtual antlrcpp::Any visitTable_vmtx(FeatParser::Table_vmtxContext *context) = 0;
 
-    virtual antlrcpp::Any visitAnchorDef(FeatParser::AnchorDefContext *context) = 0;
+    virtual antlrcpp::Any visitVmtxStatement(FeatParser::VmtxStatementContext *context) = 0;
+
+    virtual antlrcpp::Any visitVmtx(FeatParser::VmtxContext *context) = 0;
 
     virtual antlrcpp::Any visitAnchor(FeatParser::AnchorContext *context) = 0;
 
@@ -200,8 +176,6 @@ public:
     virtual antlrcpp::Any visitPattern(FeatParser::PatternContext *context) = 0;
 
     virtual antlrcpp::Any visitPatternElement(FeatParser::PatternElementContext *context) = 0;
-
-    virtual antlrcpp::Any visitGlyphClassAssign(FeatParser::GlyphClassAssignContext *context) = 0;
 
     virtual antlrcpp::Any visitGlyphClassOptional(FeatParser::GlyphClassOptionalContext *context) = 0;
 
@@ -222,6 +196,32 @@ public:
     virtual antlrcpp::Any visitFixedNum(FeatParser::FixedNumContext *context) = 0;
 
     virtual antlrcpp::Any visitGenNum(FeatParser::GenNumContext *context) = 0;
+
+    virtual antlrcpp::Any visitFeatureFile(FeatParser::FeatureFileContext *context) = 0;
+
+    virtual antlrcpp::Any visitStatementFile(FeatParser::StatementFileContext *context) = 0;
+
+    virtual antlrcpp::Any visitCvStatementFile(FeatParser::CvStatementFileContext *context) = 0;
+
+    virtual antlrcpp::Any visitBaseFile(FeatParser::BaseFileContext *context) = 0;
+
+    virtual antlrcpp::Any visitHheaFile(FeatParser::HheaFileContext *context) = 0;
+
+    virtual antlrcpp::Any visitVheaFile(FeatParser::VheaFileContext *context) = 0;
+
+    virtual antlrcpp::Any visitGdefFile(FeatParser::GdefFileContext *context) = 0;
+
+    virtual antlrcpp::Any visitNameFile(FeatParser::NameFileContext *context) = 0;
+
+    virtual antlrcpp::Any visitVmtxFile(FeatParser::VmtxFileContext *context) = 0;
+
+    virtual antlrcpp::Any visitOs_2File(FeatParser::Os_2FileContext *context) = 0;
+
+    virtual antlrcpp::Any visitStatFile(FeatParser::StatFileContext *context) = 0;
+
+    virtual antlrcpp::Any visitAxisValueFile(FeatParser::AxisValueFileContext *context) = 0;
+
+    virtual antlrcpp::Any visitNameEntryFile(FeatParser::NameEntryFileContext *context) = 0;
 
     virtual antlrcpp::Any visitSubtok(FeatParser::SubtokContext *context) = 0;
 

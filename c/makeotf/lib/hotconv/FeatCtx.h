@@ -1,5 +1,13 @@
+/* Copyright 2021 Adobe Systems Incorporated (http://www.adobe.com/). All Rights Reserved.
+ * This software is licensed as OpenSource, under the Apache License, Version 2.0. 
+ * This license is available at: http://opensource.org/licenses/Apache-2.0.
+ */
 
 #pragma once
+
+#include "feat.h"
+#include "FeatParser.h"
+#include "hotmap.h"
 
 #include "assert.h"
 #include <string>
@@ -8,12 +16,10 @@
 #include <map>
 #include <vector>
 
-#include "feat.h"
-#include "FeatParser.h"
-#include "hotmap.h"
-
-#define kLenUnicodeList 128 // number of possible entries in list of Unicode blocks
-#define kLenCodePageList 64 // number of possible entries in list of code  page numbers
+// number of possible entries in list of Unicode blocks
+#define kLenUnicodeList 128
+// number of possible entries in list of code page numbers
+#define kLenCodePageList 64
 
 class FeatVisitor;
 
@@ -25,7 +31,7 @@ class FeatCtx {
         FeatCtx(hotCtx g);
         ~FeatCtx();
 
-        // Implementations of external calls in feat.h
+        // Implementations of "external" calls in feat.h
         void fill();
 
         GNode *setNewNode(GID gid);
@@ -51,7 +57,8 @@ class FeatCtx {
         Tag str2tag(const std::string &tagName);
 
         static inline bool is_glyph(GNode *p) {
-            return p!=nullptr && p->nextSeq == nullptr && p->nextCl == nullptr &&
+            return p!=nullptr && p->nextSeq == nullptr &&
+                   p->nextCl == nullptr &&
                    !(p->flags & FEAT_GCLASS);
         }
         static inline bool is_class(GNode *p) {
@@ -84,8 +91,10 @@ class FeatCtx {
 
         struct {
             BlockNode *first {nullptr};
-            BlockNode *curr {nullptr}; // Current BlockNode being filled
-            long cnt {0};           // Index of next free GNode, relative to curr->data 
+            // Current BlockNode being filled
+            BlockNode *curr {nullptr};
+            // Index of next free GNode, relative to curr->data 
+            long cnt {0};
             long intl {3000};
             long incr {6000};
         } blockList;
@@ -122,7 +131,8 @@ class FeatCtx {
                            seenNonDFLTScriptLang = 1<<5 };
         unsigned int gFlags {gNone};
        
-        enum fFlagValues { fNone = 0, seenScriptLang = 1<<0, langSysMode = 1<<1 };
+        enum fFlagValues { fNone = 0, seenScriptLang = 1<<0,
+                           langSysMode = 1<<1 };
         unsigned int fFlags {fNone};
 
         // Glyphs
@@ -223,14 +233,16 @@ class FeatCtx {
 
         void startLookup(const std::string &name, bool isTopLevel);
         void endLookup();
-        uint16_t setLkpFlagAttribute(uint16_t val, unsigned int attr, uint16_t markAttachClassIndex);
+        uint16_t setLkpFlagAttribute(uint16_t val, unsigned int attr,
+                                     uint16_t markAttachClassIndex);
         void setLkpFlag(uint16_t flagVal);
         void callLkp(State &st);
         void useLkp(const std::string &name);
 
         struct NamedLkp {
             NamedLkp() = delete;
-            NamedLkp(const std::string &name, bool tl) : name(name), isTopLevel(tl) {}
+            NamedLkp(const std::string &name, bool tl) : name(name),
+                                                         isTopLevel(tl) {}
             std::string name;
             State state;
             bool useExtension {false}, isTopLevel;
@@ -262,16 +274,17 @@ class FeatCtx {
         size_t axistag_count {0};
         antlr4::Token *axistag_token {nullptr};
         FeatVisitor *axistag_visitor {nullptr};
-
         void (FeatCtx::*addNameFn)(long platformId, long platspecId,
                                    long languageId, const std::string &str);
 
         void startTable(Tag tag);
-        void setGDEFGlyphClassDef(GNode *simple, GNode *ligature, GNode *mark, GNode *component);
+        void setGDEFGlyphClassDef(GNode *simple, GNode *ligature, GNode *mark,
+                                  GNode *component);
         void createDefaultGDEFClasses();
         void setFontRev(const std::string &rev);
         void addNameString(long platformId, long platspecId,
-                           long languageId, long nameId, const std::string &str);
+                           long languageId, long nameId,
+                           const std::string &str);
         void addSizeNameString(long platformId, long platspecId,
                                long languageId, const std::string &str);
         void addFeatureNameString(long platformId, long platspecId,
@@ -293,7 +306,8 @@ class FeatCtx {
         std::vector<GNode *> markClasses;
         void addAnchorDef(const std::string &name, const AnchorDef &a);
         void addAnchorByName(const std::string &name, int componentIndex);
-        void addAnchorByValue(const AnchorDef &a, bool isNull, int componentIndex);
+        void addAnchorByValue(const AnchorDef &a, bool isNull,
+                              int componentIndex);
         void addMark(const std::string &name, GNode *targ);
 
         // Metrics
@@ -315,7 +329,8 @@ class FeatCtx {
 
         // Positions
         void addMarkClass(const std::string &markClassName);
-        void addGPOS(int lkpType, GNode *targ, int anchorCount, const AnchorMarkInfo *ami);
+        void addGPOS(int lkpType, GNode *targ, int anchorCount,
+                     const AnchorMarkInfo *ami);
         void addBaseClass(GNode *targ, const std::string &defaultClassName);
         void addPos(GNode *targ, int type, bool enumerate);
 
@@ -359,7 +374,7 @@ class FeatCtx {
         bool aaltCheckRule(int type, GNode *targ, GNode *repl);
         void storeRuleInfo(GNode *targ, GNode *repl);
 
-        // Cross product
+        // Temporary for cross product
         std::vector<GNode *> prod;
 
         hotCtx g;

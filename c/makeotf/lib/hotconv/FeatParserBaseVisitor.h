@@ -19,58 +19,6 @@ public:
     return visitChildren(ctx);
   }
 
-  virtual antlrcpp::Any visitFeatureFile(FeatParser::FeatureFileContext *ctx) override {
-    return visitChildren(ctx);
-  }
-
-  virtual antlrcpp::Any visitStatementFile(FeatParser::StatementFileContext *ctx) override {
-    return visitChildren(ctx);
-  }
-
-  virtual antlrcpp::Any visitCvStatementFile(FeatParser::CvStatementFileContext *ctx) override {
-    return visitChildren(ctx);
-  }
-
-  virtual antlrcpp::Any visitBaseFile(FeatParser::BaseFileContext *ctx) override {
-    return visitChildren(ctx);
-  }
-
-  virtual antlrcpp::Any visitHheaFile(FeatParser::HheaFileContext *ctx) override {
-    return visitChildren(ctx);
-  }
-
-  virtual antlrcpp::Any visitVheaFile(FeatParser::VheaFileContext *ctx) override {
-    return visitChildren(ctx);
-  }
-
-  virtual antlrcpp::Any visitGdefFile(FeatParser::GdefFileContext *ctx) override {
-    return visitChildren(ctx);
-  }
-
-  virtual antlrcpp::Any visitNameFile(FeatParser::NameFileContext *ctx) override {
-    return visitChildren(ctx);
-  }
-
-  virtual antlrcpp::Any visitVmtxFile(FeatParser::VmtxFileContext *ctx) override {
-    return visitChildren(ctx);
-  }
-
-  virtual antlrcpp::Any visitOs_2File(FeatParser::Os_2FileContext *ctx) override {
-    return visitChildren(ctx);
-  }
-
-  virtual antlrcpp::Any visitStatFile(FeatParser::StatFileContext *ctx) override {
-    return visitChildren(ctx);
-  }
-
-  virtual antlrcpp::Any visitAxisValueFile(FeatParser::AxisValueFileContext *ctx) override {
-    return visitChildren(ctx);
-  }
-
-  virtual antlrcpp::Any visitNameEntryFile(FeatParser::NameEntryFileContext *ctx) override {
-    return visitChildren(ctx);
-  }
-
   virtual antlrcpp::Any visitTopLevelStatement(FeatParser::TopLevelStatementContext *ctx) override {
     return visitChildren(ctx);
   }
@@ -79,7 +27,19 @@ public:
     return visitChildren(ctx);
   }
 
+  virtual antlrcpp::Any visitGlyphClassAssign(FeatParser::GlyphClassAssignContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
   virtual antlrcpp::Any visitLangsysAssign(FeatParser::LangsysAssignContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
+  virtual antlrcpp::Any visitMark_statement(FeatParser::Mark_statementContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
+  virtual antlrcpp::Any visitAnchorDef(FeatParser::AnchorDefContext *ctx) override {
     return visitChildren(ctx);
   }
 
@@ -87,11 +47,11 @@ public:
     return visitChildren(ctx);
   }
 
-  virtual antlrcpp::Any visitValueRecord(FeatParser::ValueRecordContext *ctx) override {
+  virtual antlrcpp::Any visitFeatureBlock(FeatParser::FeatureBlockContext *ctx) override {
     return visitChildren(ctx);
   }
 
-  virtual antlrcpp::Any visitValueLiteral(FeatParser::ValueLiteralContext *ctx) override {
+  virtual antlrcpp::Any visitTableBlock(FeatParser::TableBlockContext *ctx) override {
     return visitChildren(ctx);
   }
 
@@ -103,15 +63,23 @@ public:
     return visitChildren(ctx);
   }
 
+  virtual antlrcpp::Any visitFeatureStatement(FeatParser::FeatureStatementContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
   virtual antlrcpp::Any visitLookupBlockOrUse(FeatParser::LookupBlockOrUseContext *ctx) override {
     return visitChildren(ctx);
   }
 
-  virtual antlrcpp::Any visitFeatureBlock(FeatParser::FeatureBlockContext *ctx) override {
+  virtual antlrcpp::Any visitCvParameterBlock(FeatParser::CvParameterBlockContext *ctx) override {
     return visitChildren(ctx);
   }
 
-  virtual antlrcpp::Any visitFeatureStatement(FeatParser::FeatureStatementContext *ctx) override {
+  virtual antlrcpp::Any visitCvParameterStatement(FeatParser::CvParameterStatementContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
+  virtual antlrcpp::Any visitCvParameter(FeatParser::CvParameterContext *ctx) override {
     return visitChildren(ctx);
   }
 
@@ -155,6 +123,14 @@ public:
     return visitChildren(ctx);
   }
 
+  virtual antlrcpp::Any visitValueRecord(FeatParser::ValueRecordContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
+  virtual antlrcpp::Any visitValueLiteral(FeatParser::ValueLiteralContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
   virtual antlrcpp::Any visitCursiveElement(FeatParser::CursiveElementContext *ctx) override {
     return visitChildren(ctx);
   }
@@ -167,7 +143,11 @@ public:
     return visitChildren(ctx);
   }
 
-  virtual antlrcpp::Any visitMark_statement(FeatParser::Mark_statementContext *ctx) override {
+  virtual antlrcpp::Any visitParameters(FeatParser::ParametersContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
+  virtual antlrcpp::Any visitSizemenuname(FeatParser::SizemenunameContext *ctx) override {
     return visitChildren(ctx);
   }
 
@@ -176,26 +156,6 @@ public:
   }
 
   virtual antlrcpp::Any visitSubtable(FeatParser::SubtableContext *ctx) override {
-    return visitChildren(ctx);
-  }
-
-  virtual antlrcpp::Any visitParameters(FeatParser::ParametersContext *ctx) override {
-    return visitChildren(ctx);
-  }
-
-  virtual antlrcpp::Any visitCvParameterBlock(FeatParser::CvParameterBlockContext *ctx) override {
-    return visitChildren(ctx);
-  }
-
-  virtual antlrcpp::Any visitCvParameterStatement(FeatParser::CvParameterStatementContext *ctx) override {
-    return visitChildren(ctx);
-  }
-
-  virtual antlrcpp::Any visitCvParameter(FeatParser::CvParameterContext *ctx) override {
-    return visitChildren(ctx);
-  }
-
-  virtual antlrcpp::Any visitTableBlock(FeatParser::TableBlockContext *ctx) override {
     return visitChildren(ctx);
   }
 
@@ -283,18 +243,6 @@ public:
     return visitChildren(ctx);
   }
 
-  virtual antlrcpp::Any visitTable_vmtx(FeatParser::Table_vmtxContext *ctx) override {
-    return visitChildren(ctx);
-  }
-
-  virtual antlrcpp::Any visitVmtxStatement(FeatParser::VmtxStatementContext *ctx) override {
-    return visitChildren(ctx);
-  }
-
-  virtual antlrcpp::Any visitVmtx(FeatParser::VmtxContext *ctx) override {
-    return visitChildren(ctx);
-  }
-
   virtual antlrcpp::Any visitTable_OS_2(FeatParser::Table_OS_2Context *ctx) override {
     return visitChildren(ctx);
   }
@@ -351,11 +299,15 @@ public:
     return visitChildren(ctx);
   }
 
-  virtual antlrcpp::Any visitSizemenuname(FeatParser::SizemenunameContext *ctx) override {
+  virtual antlrcpp::Any visitTable_vmtx(FeatParser::Table_vmtxContext *ctx) override {
     return visitChildren(ctx);
   }
 
-  virtual antlrcpp::Any visitAnchorDef(FeatParser::AnchorDefContext *ctx) override {
+  virtual antlrcpp::Any visitVmtxStatement(FeatParser::VmtxStatementContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
+  virtual antlrcpp::Any visitVmtx(FeatParser::VmtxContext *ctx) override {
     return visitChildren(ctx);
   }
 
@@ -376,10 +328,6 @@ public:
   }
 
   virtual antlrcpp::Any visitPatternElement(FeatParser::PatternElementContext *ctx) override {
-    return visitChildren(ctx);
-  }
-
-  virtual antlrcpp::Any visitGlyphClassAssign(FeatParser::GlyphClassAssignContext *ctx) override {
     return visitChildren(ctx);
   }
 
@@ -420,6 +368,58 @@ public:
   }
 
   virtual antlrcpp::Any visitGenNum(FeatParser::GenNumContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
+  virtual antlrcpp::Any visitFeatureFile(FeatParser::FeatureFileContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
+  virtual antlrcpp::Any visitStatementFile(FeatParser::StatementFileContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
+  virtual antlrcpp::Any visitCvStatementFile(FeatParser::CvStatementFileContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
+  virtual antlrcpp::Any visitBaseFile(FeatParser::BaseFileContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
+  virtual antlrcpp::Any visitHheaFile(FeatParser::HheaFileContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
+  virtual antlrcpp::Any visitVheaFile(FeatParser::VheaFileContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
+  virtual antlrcpp::Any visitGdefFile(FeatParser::GdefFileContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
+  virtual antlrcpp::Any visitNameFile(FeatParser::NameFileContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
+  virtual antlrcpp::Any visitVmtxFile(FeatParser::VmtxFileContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
+  virtual antlrcpp::Any visitOs_2File(FeatParser::Os_2FileContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
+  virtual antlrcpp::Any visitStatFile(FeatParser::StatFileContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
+  virtual antlrcpp::Any visitAxisValueFile(FeatParser::AxisValueFileContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
+  virtual antlrcpp::Any visitNameEntryFile(FeatParser::NameEntryFileContext *ctx) override {
     return visitChildren(ctx);
   }
 

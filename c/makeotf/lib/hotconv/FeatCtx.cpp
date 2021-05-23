@@ -1,10 +1,7 @@
-
-#include "antlr4-runtime.h"
-#include <algorithm>
-#include "assert.h"
-#include <iostream>
-#include <memory>
-#include "string.h"
+/* Copyright 2021 Adobe Systems Incorporated (http://www.adobe.com/). All Rights Reserved.
+ * This software is licensed as OpenSource, under the Apache License, Version 2.0. 
+ * This license is available at: http://opensource.org/licenses/Apache-2.0.
+ */
 
 #include "FeatCtx.h"
 #include "FeatVisitor.h"
@@ -17,6 +14,13 @@
 #include "BASE.h"
 #include "STAT.h"
 #include "name.h"
+
+#include "antlr4-runtime.h"
+#include <algorithm>
+#include "assert.h"
+#include <iostream>
+#include <memory>
+#include "string.h"
 
 #define kDEFAULT_BASECLASS_NAME "FDK_BASE_CLASS"
 #define kDEFAULT_LIGATURECLASS_NAME "FDK_LIGATURE_CLASS"
@@ -63,6 +67,8 @@ FeatCtx::~FeatCtx() {
     freeBlocks();
 }
 
+// --------------------------- Main entry point ------------------------------
+
 void FeatCtx::fill(void) {
     char *featpathname = g->cb.featTopLevelFile(g->cb.ctx);
     if ( featpathname == nullptr )
@@ -89,6 +95,8 @@ void FeatCtx::fill(void) {
 
     hotQuitOnError(g);
 }
+
+// ------------------------ GNode memory management --------------------------
 
 void FeatCtx::addBlock() {
     auto &bl = blockList;
@@ -276,6 +284,8 @@ void FeatCtx::recycleNodes(GNode *node) {
     }
 }
 
+// ---------------------------- Console messages -----------------------------
+
 void FeatCtx::msgPrefix(char **premsg, char **prefix) {
     assert( premsg != nullptr && prefix != nullptr );
     *premsg = *prefix = nullptr;
@@ -332,8 +342,6 @@ const char *FeatCtx::tokstr() {
     return current_visitor->currentTokStr();
 }
 
-/* Current fea, scr, lan, lkpFlag already set. Need to set label. */
-
 void FeatCtx::setIDText()
 {
     int len;
@@ -369,6 +377,8 @@ void FeatCtx::reportOldSyntax() {
                one ? "" : "s");
     }
 }
+
+// ---------------------------- Glyphs and Classes -----------------------------
 
 /* Map feature file glyph name to gid; emit error message and return notdef if
    not found (in order to continue until hotQuitOnError() called) */
@@ -413,8 +423,6 @@ GID FeatCtx::cid2gid(const std::string &cidstr) {
     }
     return gid; /* Suppress compiler warning */
 }
-
-/* --- Glyph class --- */
 
 /* Get count of number of nodes in glyph class */
 
@@ -863,6 +871,8 @@ void FeatCtx::dumpPattern(GNode *pat, int ch, bool print) {
     }
 }
 
+// ----------------------------------- Tags ------------------------------------
+
 Tag FeatCtx::str2tag(const std::string &tagName) {
     if ( tagName.length() > 4 )
         featMsg(hotERROR, "Tag %s exceeds 4 characters", tagName.c_str());
@@ -920,6 +930,8 @@ bool FeatCtx::tagAssign(Tag tag, enum TagType type, bool checkIfDef) {
 
     return true;
 }
+
+// --------------------------- Scripts and Languages ---------------------------
 
 int FeatCtx::startScriptOrLang(TagType type, Tag tag) {
     if (curr.feature == aalt_ || curr.feature == size_) {
@@ -1118,6 +1130,8 @@ void FeatCtx::registerFeatureLangSys() {
     }
 }
 
+// --------------------------------- Features ----------------------------------
+
 void FeatCtx::startFeature(Tag tag) {
     /* Allow interleaving features */
     if ( !tagAssign(tag, featureTag, true) ) {
@@ -1196,6 +1210,46 @@ void FeatCtx::closeFeatScriptLang(State &st) {
         GPOSFeatureEnd(g);
     }
 }
+
+void FeatCtx::addFeatureParam(const std::vector<uint16_t> &params) {
+    switch (curr.feature) {
+        case size_:
+            prepRule(GPOS_, GPOSFeatureParam, NULL, NULL);
+
+            GPOSAddSize(g, (short *) params.data(), params.size());
+
+            wrapUpRule();
+
+            break;
+
+        default:
+            featMsg(hotERROR,
+                    "A feature parameter is supported only for the 'size' feature.");
+    }
+}
+
+void FeatCtx::subtableBreak() {
+    bool retval = false;
+
+    if (curr.feature == aalt_ || curr.feature == size_) {
+        featMsg(hotERROR, "\"subtable\" use not allowed in 'aalt' or 'size' feature");
+        return;
+    }
+
+    if (curr.tbl == GSUB_) {
+        retval = GSUBSubtableBreak(g);
+    } else if (curr.tbl == GPOS_) {
+        retval = GPOSSubtableBreak(g);
+    } else {
+        featMsg(hotWARNING, "Statement not expected here");
+        return;
+    }
+
+    if (retval)
+        featMsg(hotWARNING, "subtable break is supported only in class kerning lookups");
+}
+
+// --------------------------------- Lookups -----------------------------------
 
 void FeatCtx::startLookup(const std::string &name, bool isTopLevel) {
     if (isTopLevel) {
@@ -1290,8 +1344,6 @@ void FeatCtx::setLkpFlag(uint16_t flag) {
     /* if UseMarkSet, then the markSetIndex is set in setLkpFlagAttribute() */
 }
 
-/* Named or anon */
-
 void FeatCtx::callLkp(State &st) {
     Label lab = st.label;
 
@@ -1362,46 +1414,6 @@ void FeatCtx::useLkp(const std::string &name) {
     }
 }
 
-/* Add feature parameters */
-
-void FeatCtx::addFeatureParam(const std::vector<uint16_t> &params) {
-    switch (curr.feature) {
-        case size_:
-            prepRule(GPOS_, GPOSFeatureParam, NULL, NULL);
-
-            GPOSAddSize(g, (short *) params.data(), params.size());
-
-            wrapUpRule();
-
-            break;
-
-        default:
-            featMsg(hotERROR,
-                    "A feature parameter is supported only for the 'size' feature.");
-    }
-}
-
-void FeatCtx::subtableBreak() {
-    bool retval = false;
-
-    if (curr.feature == aalt_ || curr.feature == size_) {
-        featMsg(hotERROR, "\"subtable\" use not allowed in 'aalt' or 'size' feature");
-        return;
-    }
-
-    if (curr.tbl == GSUB_) {
-        retval = GSUBSubtableBreak(g);
-    } else if (curr.tbl == GPOS_) {
-        retval = GPOSSubtableBreak(g);
-    } else {
-        featMsg(hotWARNING, "Statement not expected here");
-        return;
-    }
-
-    if (retval)
-        featMsg(hotWARNING, "subtable break is supported only in class kerning lookups");
-}
-
 FeatCtx::NamedLkp *FeatCtx::name2NamedLkp(const std::string &lkpName) {
     for (auto &it : namedLkp) {
         if ( it.name == lkpName )
@@ -1447,6 +1459,8 @@ Label FeatCtx::getNextAnonLabel() {
     }
     return anonLabelCnt++;
 }
+
+// ---------------------------------- Tables -----------------------------------
 
 void FeatCtx::startTable(Tag tag) {
     if ( !tagAssign(tag, tableTag, true) )
@@ -1598,6 +1612,14 @@ void FeatCtx::addFeatureNameString(long platformId, long platspecId,
     addNameString(platformId, platspecId, languageId, nameID, str);
 }
 
+void FeatCtx::addFeatureNameParam() {
+    prepRule(GSUB_, GSUBFeatureNameParam, NULL, NULL);
+
+    GSUBAddFeatureMenuParam(g, &featNameID);
+
+    wrapUpRule();
+}
+
 void FeatCtx::addUserNameString(long platformId, long platspecId,
                                 long languageId, const std::string &str) {
     unsigned short nameID;
@@ -1634,13 +1656,7 @@ void FeatCtx::addVendorString(std::string str) {
     setVendId_str(g, str.c_str());
 }
 
-void FeatCtx::addFeatureNameParam() {
-    prepRule(GSUB_, GSUBFeatureNameParam, NULL, NULL);
-
-    GSUBAddFeatureMenuParam(g, &featNameID);
-
-    wrapUpRule();
-}
+// --------------------------------- Anchors -----------------------------------
 
 void FeatCtx::addAnchorDef(const std::string &name, const AnchorDef &a) {
     auto ret = anchorDefs.insert(std::make_pair(name, a));
@@ -1721,6 +1737,8 @@ void FeatCtx::addMark(const std::string &name, GNode *targ) {
     gFlags |= seenMarkClassFlag;
 }
 
+// --------------------------------- Metrics -----------------------------------
+
 void FeatCtx::addValueDef(const std::string &name, const MetricsInfo &mi) {
     auto ret = valueDefs.insert(std::make_pair(name, mi));
 
@@ -1735,6 +1753,8 @@ void FeatCtx::getValueDef(const std::string &name, MetricsInfo &mi) {
     else
         mi = search->second;
 }
+
+// ------------------------------ Substitutions --------------------------------
 
 void FeatCtx::prepRule(Tag newTbl, int newlkpType, GNode *targ, GNode *repl) {
     int accumDFLTLkps = 1;
@@ -2299,6 +2319,8 @@ void FeatCtx::wrapUpRule() {
     endOfNamedLkpOrRef = false;
 }
 
+// -------------------------------- Positions ----------------------------------
+
 /* Add mark class reference to current anchorMarkInfo for the rule. */
 void FeatCtx::addMarkClass(const std::string &markClassName) {
     if ( !openAsCurrentGC(markClassName) ) {
@@ -2614,6 +2636,8 @@ void FeatCtx::addPos(GNode *targ, int type, bool enumerate) {
     }
 }
 
+// ------------------------------ CV Parameters --------------------------------
+
 void FeatCtx::clearCVParameters() {
     sawCVParams = true;
     cvParameters.FeatUILabelNameID = 0;
@@ -2677,6 +2701,7 @@ void FeatCtx::addCVParam() {
     wrapUpRule();
 }
 
+// --------------------------------- Ranges ------------------------------------
 
 /* Add Unicode and CodePage ranges to  OS/2 table. */
 /* ------------------------------------------------------------------- */
@@ -2810,6 +2835,8 @@ void FeatCtx::setCodePageRange(short codePageList[kLenCodePageList]) {
 
     OS_2SetCodePageRanges(g, codePageRange[0], codePageRange[1]);
 }
+
+// ---------------------------------- aalt -------------------------------------
 
 void FeatCtx::aaltAddFeatureTag(Tag tag) {
     if (curr.feature != aalt_) {
@@ -3158,6 +3185,8 @@ GNode **FeatCtx::makeCrossProduct(GNode *pat, unsigned *n) {
     *n = prod.size();
     return prod.data();
 }
+
+// -------------------------------- C Hooks -----------------------------------
 
 inline FeatCtx *hctofc(hotCtx g) {
     assert( g->ctx.feat != nullptr );

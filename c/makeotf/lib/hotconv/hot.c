@@ -886,7 +886,7 @@ void patch_cff_fontbbox(hotCtx g) {
     long count;
     char *data;
     long offset, top_dict_start, top_dict_end;
-    uint8_t b0;
+    uint8_t b0 = 0;
 
     data = g->cb.cffSeek(g->cb.ctx, 0, &count);
 

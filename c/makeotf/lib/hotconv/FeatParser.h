@@ -53,7 +53,7 @@ public:
     RuleLookupBlockOrUse = 22, RuleFeatureBlock = 23, RuleFeatureStatement = 24, 
     RuleStatement = 25, RuleFeatureUse = 26, RuleScriptAssign = 27, RuleLangAssign = 28, 
     RuleLookupflagAssign = 29, RuleLookupflagElement = 30, RuleIgnoreSubOrPos = 31, 
-    RuleSubstitute = 32, RulePosition = 33, RuleValuePattern = 34, RuleCursive = 35, 
+    RuleSubstitute = 32, RulePosition = 33, RuleValuePattern = 34, RuleCursiveElement = 35, 
     RuleBaseToMarkElement = 36, RuleLigatureMarkElement = 37, RuleMark_statement = 38, 
     RuleFeatureNames = 39, RuleSubtable = 40, RuleParameters = 41, RuleCvParameterBlock = 42, 
     RuleCvParameterStatement = 43, RuleCvParameter = 44, RuleTableBlock = 45, 
@@ -121,7 +121,7 @@ public:
   class SubstituteContext;
   class PositionContext;
   class ValuePatternContext;
-  class CursiveContext;
+  class CursiveElementContext;
   class BaseToMarkElementContext;
   class LigatureMarkElementContext;
   class Mark_statementContext;
@@ -780,7 +780,7 @@ public:
     PatternContext* pattern(size_t i);
     ValueRecordContext *valueRecord();
     antlr4::tree::TerminalNode *CURSIVE();
-    CursiveContext *cursive();
+    CursiveElementContext *cursiveElement();
     antlr4::tree::TerminalNode *MARKBASE();
     MarkligtokContext *markligtok();
     antlr4::tree::TerminalNode *MARK();
@@ -818,9 +818,9 @@ public:
 
   ValuePatternContext* valuePattern();
 
-  class  CursiveContext : public antlr4::ParserRuleContext {
+  class  CursiveElementContext : public antlr4::ParserRuleContext {
   public:
-    CursiveContext(antlr4::ParserRuleContext *parent, size_t invokingState);
+    CursiveElementContext(antlr4::ParserRuleContext *parent, size_t invokingState);
     virtual size_t getRuleIndex() const override;
     PatternElementContext *patternElement();
     std::vector<AnchorContext *> anchor();
@@ -831,7 +831,7 @@ public:
    
   };
 
-  CursiveContext* cursive();
+  CursiveElementContext* cursiveElement();
 
   class  BaseToMarkElementContext : public antlr4::ParserRuleContext {
   public:

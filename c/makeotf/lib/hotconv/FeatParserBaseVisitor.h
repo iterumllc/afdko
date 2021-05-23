@@ -155,7 +155,7 @@ public:
     return visitChildren(ctx);
   }
 
-  virtual antlrcpp::Any visitCursive(FeatParser::CursiveContext *ctx) override {
+  virtual antlrcpp::Any visitCursiveElement(FeatParser::CursiveElementContext *ctx) override {
     return visitChildren(ctx);
   }
 

@@ -70,40 +70,35 @@ void FeatVisitor::Parse(bool do_includes) {
         }
         assignDirName(pathname, dirname);
     } else {
-        bool found = false;
         std::string &rootdir = fc->root_visitor->dirname;
+        std::string fullname;
         // Try relative to (potential) UFO fontinfo.plist file
         stream.open(rootdir + sep() + "fontinfo.plist");
         if ( stream.is_open() ) {
             stream.close();
-            dirname = rootdir + sep() + "..";
-            stream.open(dirname + sep() + pathname);
-            found = stream.is_open();
+            fullname = rootdir + sep() + ".." + sep() + pathname;
+            stream.open(fullname);
         }
         // Try relative to top-level file
-        if ( !found ) {
-            dirname = rootdir;
-            stream.open(dirname + sep() + pathname);
-            found = stream.is_open();
+        if ( !stream.is_open() ) {
+            fullname = rootdir + sep() + pathname;
+            stream.open(fullname);
         }
         // Try relative to including file
-        if ( !found && rootdir != parent->dirname ) {
-            dirname = parent->dirname;
-            stream.open(dirname + sep() + pathname);
-            found = stream.is_open();
+        if ( !stream.is_open() && rootdir != parent->dirname ) {
+            fullname = parent->dirname + sep() + pathname;
+            stream.open(fullname);
         }
         // Try just the pathname
-        if ( !found ) {
-            stream.open(pathname);
-            if ( stream.is_open() ) {
-                assignDirName(pathname, dirname);
-                found = true;
-            }
+        if ( !stream.is_open() ) {
+            fullname = pathname;
+            stream.open(fullname);
         }
-        if ( !found ) {
+        if ( !stream.is_open() ) {
             fc->featMsg(hotERROR, "Included feature file '%s' not found", pathname.c_str());
             return;
         }
+        assignDirName(fullname, dirname);
     }
 
     input = new antlr4::ANTLRInputStream(stream);
@@ -284,7 +279,7 @@ antlrcpp::Any FeatVisitor::visitValueRecordDef(FeatParser::ValueRecordDefContext
         return nullptr;
 
     MetricsInfo mi = METRICSINFOEMPTY;
-    translateValueLiteral(ctx->valueLiteral(), mi);
+    getValueLiteral(ctx->valueLiteral(), mi);
     fc->addValueDef(TOK(ctx->label())->getText(), mi);
 
     return nullptr;
@@ -500,7 +495,7 @@ antlrcpp::Any FeatVisitor::visitAxisScripts(FeatParser::AxisScriptsContext *ctx)
         fc->featMsg(hotERROR, "expecting \"HorizAxis.BaseScriptList\"");
 
     for ( auto bs: ctx->baseScript() )
-        addBaseScript(bs, fc->axistag_vert, fc->axistag_count);
+        translateBaseScript(bs, fc->axistag_vert, fc->axistag_count);
 
     fc->axistag_count = 0;
     fc->axistag_token = nullptr;
@@ -509,7 +504,7 @@ antlrcpp::Any FeatVisitor::visitAxisScripts(FeatParser::AxisScriptsContext *ctx)
     return nullptr;
 }
 
-void FeatVisitor::addBaseScript(FeatParser::BaseScriptContext *ctx, bool vert, size_t cnt) {
+void FeatVisitor::translateBaseScript(FeatParser::BaseScriptContext *ctx, bool vert, size_t cnt) {
     Tag script = fc->str2tag(TOK(ctx->script)->getText());
     Tag db = fc->str2tag(TOK(ctx->db)->getText());
     
@@ -553,7 +548,7 @@ antlrcpp::Any FeatVisitor::visitGdefGlyphClass(FeatParser::GdefGlyphClassContext
     for (int i = 0; i < 4; ++i) {
         auto gco = ctx->glyphClassOptional(i);
         if ( gco->glyphClass() != nullptr )
-            gc[i] = translateGlyphClass(gco->glyphClass(), false);
+            gc[i] = getGlyphClass(gco->glyphClass(), false);
     }
     fc->setGDEFGlyphClassDef(gc[0], gc[1], gc[2], gc[3]);
     return nullptr;
@@ -563,7 +558,7 @@ antlrcpp::Any FeatVisitor::visitGdefAttach(FeatParser::GdefAttachContext *ctx) {
     if ( stage != vExtract )
         return nullptr;
 
-    GNode *pat = translateLookupPattern(ctx->lookupPattern(), false);
+    GNode *pat = getLookupPattern(ctx->lookupPattern(), false);
     if (pat->nextSeq != NULL)
         fc->featMsg(hotERROR,
                     "Only one glyph|glyphClass may be present per"
@@ -584,23 +579,23 @@ antlrcpp::Any FeatVisitor::visitGdefAttach(FeatParser::GdefAttachContext *ctx) {
 antlrcpp::Any FeatVisitor::visitGdefLigCaretPos(FeatParser::GdefLigCaretPosContext *ctx) {
     if ( stage != vExtract )
         return nullptr;
-    doGdefLigCaret(ctx->lookupPattern(), ctx->NUM(), 1);
+    translateGdefLigCaret(ctx->lookupPattern(), ctx->NUM(), 1);
     return nullptr;
 }
 
 antlrcpp::Any FeatVisitor::visitGdefLigCaretIndex(FeatParser::GdefLigCaretIndexContext *ctx) {
     if ( stage != vExtract )
         return nullptr;
-    doGdefLigCaret(ctx->lookupPattern(), ctx->NUM(), 2);
+    translateGdefLigCaret(ctx->lookupPattern(), ctx->NUM(), 2);
     return nullptr;
 }
 
-void FeatVisitor::doGdefLigCaret(FeatParser::LookupPatternContext *pctx,
+void FeatVisitor::translateGdefLigCaret(FeatParser::LookupPatternContext *pctx,
                                  std::vector<antlr4::tree::TerminalNode *> nv,
                                  unsigned short format) {
     assert( stage == vExtract );
 
-    GNode *pat = translateLookupPattern(pctx, false);
+    GNode *pat = getLookupPattern(pctx, false);
     if (pat->nextSeq != NULL)
         fc->featMsg(hotERROR, "Only one glyph|glyphClass may be present per"
                               " LigatureCaret statement");
@@ -1011,11 +1006,17 @@ antlrcpp::Any FeatVisitor::visitFeatureUse(FeatParser::FeatureUseContext *ctx) {
 }
 
 antlrcpp::Any FeatVisitor::visitScriptAssign(FeatParser::ScriptAssignContext *ctx) {
+    if ( stage != vExtract )
+        return nullptr;
+
     fc->startScriptOrLang(FeatCtx::scriptTag, fc->str2tag(TOK(ctx->tag())->getText()));
     return nullptr;
 }
 
 antlrcpp::Any FeatVisitor::visitLangAssign(FeatParser::LangAssignContext *ctx) {
+    if ( stage != vExtract )
+        return nullptr;
+
     int lang_change = fc->startScriptOrLang(FeatCtx::languageTag, fc->str2tag(TOK(ctx->tag())->getText()));
 
     bool old_format = false, include_dflt = true;
@@ -1039,7 +1040,7 @@ antlrcpp::Any FeatVisitor::visitIgnoreSubOrPos(FeatParser::IgnoreSubOrPosContext
     bool is_sub = ctx->postok() == nullptr;
 
     for (auto lp: ctx->lookupPattern()) {
-        GNode *targ = translateLookupPattern(lp, true);
+        GNode *targ = getLookupPattern(lp, true);
         targ->flags |= FEAT_IGNORE_CLAUSE;
         if ( is_sub )
             fc->addSub(targ, nullptr, sub_type);
@@ -1063,7 +1064,7 @@ antlrcpp::Any FeatVisitor::visitSubstitute(FeatParser::SubstituteContext *ctx) {
         for (auto i: ctx->lookupPattern()) {
             if ( i==ctx->startpat || i==ctx->endpat )
                 continue;
-            targ = translateLookupPattern(i, true);
+            targ = getLookupPattern(i, true);
             targ->flags |= FEAT_IGNORE_CLAUSE;
             fc->addSub(targ, nullptr, type);
         }
@@ -1074,17 +1075,17 @@ antlrcpp::Any FeatVisitor::visitSubstitute(FeatParser::SubstituteContext *ctx) {
         assert( ctx->startpat != nullptr );
 
         // XXX no clause equivalent to NULL -- is that right?
-        targ = translateLookupPattern(ctx->startpat, true);
+        targ = getLookupPattern(ctx->startpat, true);
         if ( ctx->endpat != nullptr )
-            repl = translateLookupPattern(ctx->endpat, false);
+            repl = getLookupPattern(ctx->endpat, false);
     } else {
         assert( ctx->subtok() != nullptr );
         assert( ctx->startpat != nullptr );
         if ( ctx->FROM() != nullptr )
             type = GSUBAlternate;
-        targ = translateLookupPattern(ctx->startpat, true);
+        targ = getLookupPattern(ctx->startpat, true);
         if ( ctx->endpat != nullptr )
-            repl = translateLookupPattern(ctx->endpat, false);
+            repl = getLookupPattern(ctx->endpat, false);
     }
     TOK(ctx);
     fc->addSub(targ, repl, type);
@@ -1102,7 +1103,7 @@ antlrcpp::Any FeatVisitor::visitMark_statement(FeatParser::Mark_statementContext
         targ = fc->setNewNode(getGlyph(ctx->glyph(), false));
     } else {
         assert( ctx->glyphClass() != nullptr );
-        targ = translateGlyphClass(ctx->glyphClass(), false);
+        targ = getGlyphClass(ctx->glyphClass(), false);
     }
 
     translateAnchor(ctx->anchor(), 0);
@@ -1130,11 +1131,11 @@ antlrcpp::Any FeatVisitor::visitPosition(FeatParser::PositionContext *ctx) {
             return nullptr;
         }
         type = GPOSSingle;
-        translateValueRecord(ctx->valueRecord(), tail->metricsInfo);
+        getValueRecord(ctx->valueRecord(), tail->metricsInfo);
         for (auto vp: ctx->valuePattern()) {
             tail = concatenatePatternElement(&tail, vp->patternElement());
             if ( vp->valueRecord() )
-                translateValueRecord(vp->valueRecord(), tail->metricsInfo);
+                getValueRecord(vp->valueRecord(), tail->metricsInfo);
         }
     } else if ( ctx->LOOKUP().size() != 0 ) {
         if ( tail == nullptr ) {
@@ -1149,15 +1150,15 @@ antlrcpp::Any FeatVisitor::visitPosition(FeatParser::PositionContext *ctx) {
                 fc->featMsg(hotFATAL, "Too many lookup references in one glyph position.");
         }
         for (auto lpe: ctx->lookupPatternElement()) {
-            tail->nextSeq = translateLookupPatternElement(lpe, true);
+            tail->nextSeq = getLookupPatternElement(lpe, true);
             tail = tail->nextSeq;
         }
-    } else if ( ctx->cursive() != nullptr ) {
+    } else if ( ctx->cursiveElement() != nullptr ) {
         type = GPOSCursive;
         tail = concatenatePatternElement(tail == nullptr ? &head : &tail,
-                                         ctx->cursive()->patternElement());
+                                         ctx->cursiveElement()->patternElement());
         tail->flags |= FEAT_IS_BASE_NODE;
-        for (auto a: ctx->cursive()->anchor())
+        for (auto a: ctx->cursiveElement()->anchor())
             translateAnchor(a, 0);
         if ( ctx->endpat != nullptr )
             tail = concatenatePattern(&tail, ctx->endpat);
@@ -1263,12 +1264,12 @@ antlrcpp::Any FeatVisitor::visitLookupflagAssign(FeatParser::LookupflagAssignCon
         else if ( e->IGNOREMARKS() != nullptr )
             v = fc->setLkpFlagAttribute(v, otlIgnoreMarks, 0);
         else if ( e->USEMARKFILTERINGSET() != nullptr ) {
-            gc = translateGlyphClass(e->glyphClass(), true);
+            gc = getGlyphClass(e->glyphClass(), true);
             uint16_t umfIndex = addMarkSetClassGDEF(fc->g, gc);
             v = fc->setLkpFlagAttribute(v, otlUseMarkFilteringSet, umfIndex);
         } else {
             assert( e->MARKATTACHMENTTYPE() != nullptr );
-            gc = translateGlyphClass(e->glyphClass(), true);
+            gc = getGlyphClass(e->glyphClass(), true);
             uint16_t macIndex = addGlyphMarkClassGDEF(fc->g, gc);
             if ( macIndex > kMaxMarkAttachClasses )
                 fc->featMsg(hotERROR, "No more than 15 different class names can be used with the \"lookupflag MarkAttachmentType\". This would be a 16th.");
@@ -1335,7 +1336,7 @@ antlrcpp::Any FeatVisitor::visitGlyphClassAssign(FeatParser::GlyphClassAssignCon
     if ( stage != vExtract )
         return nullptr;
 
-    translateGlyphClassAsCurrentGC(ctx->glyphClass(), ctx->GCLASS(), false);
+    getGlyphClassAsCurrentGC(ctx->glyphClass(), ctx->GCLASS(), false);
     TOK(ctx);
     fc->finishCurrentGC();
 
@@ -1363,26 +1364,26 @@ bool FeatVisitor::translateAnchor(FeatParser::AnchorContext *ctx, int componentI
     return false;
 }
 
-void FeatVisitor::translateValueRecord(FeatParser::ValueRecordContext *ctx, MetricsInfo &mi) {
+void FeatVisitor::getValueRecord(FeatParser::ValueRecordContext *ctx, MetricsInfo &mi) {
     if ( ctx->valuename != nullptr )
         fc->getValueDef(TOK(ctx->valuename)->getText(), mi);
     else
-        translateValueLiteral(ctx->valueLiteral(), mi);
+        getValueLiteral(ctx->valueLiteral(), mi);
 }
 
-void FeatVisitor::translateValueLiteral(FeatParser::ValueLiteralContext *ctx, MetricsInfo &mi) {
+void FeatVisitor::getValueLiteral(FeatParser::ValueLiteralContext *ctx, MetricsInfo &mi) {
     mi.cnt = ctx->NUM().size();
     assert( mi.cnt == 1 || mi.cnt == 4 );
     for (int16_t i = 0; i < mi.cnt; ++i)
         mi.metrics[i] = getNum<int16_t>(TOK(ctx->NUM(i))->getText(), 10);
 }
 
-GNode *FeatVisitor::translateLookupPattern(FeatParser::LookupPatternContext *ctx, bool markedOK) {
+GNode *FeatVisitor::getLookupPattern(FeatParser::LookupPatternContext *ctx, bool markedOK) {
     GNode *ret, **insert = &ret;
     assert( stage == vExtract );
 
     for (auto &pe : ctx->lookupPatternElement()) {
-        *insert = translateLookupPatternElement(pe, markedOK);
+        *insert = getLookupPatternElement(pe, markedOK);
         if ( (*insert)->flags & FEAT_LOOKUP_NODE ) {
             (*insert)->flags &= ~FEAT_LOOKUP_NODE;
             ret->flags |= FEAT_LOOKUP_NODE;
@@ -1392,8 +1393,8 @@ GNode *FeatVisitor::translateLookupPattern(FeatParser::LookupPatternContext *ctx
     return ret;
 }
 
-GNode *FeatVisitor::translateLookupPatternElement(FeatParser::LookupPatternElementContext *ctx, bool markedOK) {
-    GNode *ret = translatePatternElement(ctx->patternElement(), markedOK);
+GNode *FeatVisitor::getLookupPatternElement(FeatParser::LookupPatternElementContext *ctx, bool markedOK) {
+    GNode *ret = getPatternElement(ctx->patternElement(), markedOK);
     for (auto l: ctx->label()) {
         int labelIndex = fc->getLabelIndex(TOK(l)->getText());
         ret->lookupLabels[ret->lookupLabelCount++] = labelIndex;
@@ -1405,7 +1406,7 @@ GNode *FeatVisitor::translateLookupPatternElement(FeatParser::LookupPatternEleme
 }
 
 GNode *FeatVisitor::concatenatePattern(GNode **loc, FeatParser::PatternContext *ctx, int flags) {
-    GNode *ret, **insert = loc;
+    GNode *ret = *loc, **insert = loc;
     bool first = true;
     assert( stage == vExtract );
 
@@ -1413,7 +1414,7 @@ GNode *FeatVisitor::concatenatePattern(GNode **loc, FeatParser::PatternContext *
         insert = &(*insert)->nextSeq;
 
     for (auto &pe : ctx->patternElement()) {
-        ret = *insert = translatePatternElement(pe, true);
+        ret = *insert = getPatternElement(pe, true);
         if ( first && flags != 0 )
             ret->flags |= flags;
         first = false;
@@ -1428,18 +1429,18 @@ GNode *FeatVisitor::concatenatePatternElement(GNode **loc, FeatParser::PatternEl
     if ( *loc != nullptr )
         loc = &(*loc)->nextSeq;
 
-    *loc = translatePatternElement(ctx, true);
+    *loc = getPatternElement(ctx, true);
     return *loc;
 }
 
-GNode *FeatVisitor::translatePatternElement(FeatParser::PatternElementContext *ctx, bool markedOK) {
+GNode *FeatVisitor::getPatternElement(FeatParser::PatternElementContext *ctx, bool markedOK) {
     GNode *ret;
 
     if ( ctx->glyph() != nullptr ) {
         ret = fc->setNewNode(getGlyph(ctx->glyph(), false));
     } else {
         assert( ctx->glyphClass() != nullptr );
-        ret = translateGlyphClass(ctx->glyphClass(), false);
+        ret = getGlyphClass(ctx->glyphClass(), false);
     }
     if ( ctx->MARKER() != nullptr ) {
         if ( markedOK )
@@ -1452,15 +1453,15 @@ GNode *FeatVisitor::translatePatternElement(FeatParser::PatternElementContext *c
     return ret;
 }
 
-GNode *FeatVisitor::translateGlyphClass(FeatParser::GlyphClassContext *ctx, bool dontcopy) {
+GNode *FeatVisitor::getGlyphClass(FeatParser::GlyphClassContext *ctx, bool dontcopy) {
     assert( stage == vExtract );
-    translateGlyphClassAsCurrentGC(ctx, nullptr, dontcopy);
+    getGlyphClassAsCurrentGC(ctx, nullptr, dontcopy);
     TOK(ctx);
     return fc->finishCurrentGC();
 }
 
-void FeatVisitor::translateGlyphClassAsCurrentGC(FeatParser::GlyphClassContext *ctx,
-                                                 antlr4::tree::TerminalNode *target_gc, bool dontcopy) {
+void FeatVisitor::getGlyphClassAsCurrentGC(FeatParser::GlyphClassContext *ctx,
+                                           antlr4::tree::TerminalNode *target_gc, bool dontcopy) {
     assert( stage == vExtract );
     if ( ctx->GCLASS() != nullptr && dontcopy ) {
         fc->openAsCurrentGC(TOK(ctx->GCLASS())->getText());

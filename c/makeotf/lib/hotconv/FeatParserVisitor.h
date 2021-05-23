@@ -89,7 +89,7 @@ public:
 
     virtual antlrcpp::Any visitValuePattern(FeatParser::ValuePatternContext *context) = 0;
 
-    virtual antlrcpp::Any visitCursive(FeatParser::CursiveContext *context) = 0;
+    virtual antlrcpp::Any visitCursiveElement(FeatParser::CursiveElementContext *context) = 0;
 
     virtual antlrcpp::Any visitBaseToMarkElement(FeatParser::BaseToMarkElementContext *context) = 0;
 

@@ -180,8 +180,8 @@ position:
     enumtok? postok startpat=pattern?
     ( 
         ( valueRecord valuePattern* )
-      | ( ( LOOKUP label )+ lookupPatternElement+ )
-      | ( CURSIVE cursive endpat=pattern? )
+      | ( ( LOOKUP label )+ lookupPatternElement* )
+      | ( CURSIVE cursiveElement endpat=pattern? )
       | ( MARKBASE midpat=pattern baseToMarkElement+ endpat=pattern? )
       | ( markligtok midpat=pattern ligatureMarkElement+ endpat=pattern? )
       | ( MARK midpat=pattern baseToMarkElement+ endpat=pattern? )
@@ -192,7 +192,7 @@ valuePattern:
     patternElement valueRecord?
 ;
 
-cursive:
+cursiveElement:
     patternElement anchor anchor
 ;
 

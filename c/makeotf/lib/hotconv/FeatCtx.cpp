@@ -870,7 +870,7 @@ Tag FeatCtx::str2tag(const std::string &tagName) {
         return dflt_;
     } else {
         int i;
-        char buf[4];
+        char buf[5];
         strncpy(buf, tagName.c_str(), 4);
         for (i = 3; buf[i] == '\0'; i--)
             buf[i] = ' ';
@@ -2006,7 +2006,7 @@ bool FeatCtx::validateGSUBReverseChain(GNode *targ, GNode *repl) {
     int state;
     GNode *p;
     GNode *input = NULL; /* first node  of input sequence */
-    GNode *m = NULL;
+    // GNode *m = NULL;
     int nMarked = 0;
 
     if (repl == NULL) {
@@ -2043,7 +2043,7 @@ bool FeatCtx::validateGSUBReverseChain(GNode *targ, GNode *repl) {
     for (p = targ; p != NULL; p = p->nextSeq) {
         if (p->flags & FEAT_MARKED) {
             if (++nMarked == 1) {
-                m = p;
+                ; // m = p;
             }
         } else if (p->nextSeq != NULL && p->nextSeq->flags & FEAT_MARKED && nMarked > 0) {
             featMsg(hotERROR, "Reverse contextual GSUB rule may must have one and only one glyph or class marked for replacement");
@@ -2053,7 +2053,7 @@ bool FeatCtx::validateGSUBReverseChain(GNode *targ, GNode *repl) {
 
     /* If nothing is marked, mark everything [xxx?] */
     if (nMarked == 0) {
-        m = targ;
+        // m = targ;
         for (p = targ; p != NULL; p = p->nextSeq) {
             p->flags |= FEAT_MARKED;
             nMarked++;

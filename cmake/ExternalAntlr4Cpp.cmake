@@ -1,6 +1,5 @@
-cmake_minimum_required(VERSION 3.7)
-
 include(ExternalProject)
+cmake_policy(SET CMP0114 NEW)  # Added by iterumllc
 
 set(ANTLR4_ROOT ${CMAKE_CURRENT_BINARY_DIR}/antlr4_runtime/src/antlr4_runtime)
 set(ANTLR4_INCLUDE_DIRS ${ANTLR4_ROOT}/runtime/Cpp/runtime/src)

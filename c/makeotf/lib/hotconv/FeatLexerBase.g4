@@ -149,11 +149,11 @@ COMMA                   : ',' ;
 QUOTE                   : '"' -> pushMode(String) ;
 
 fragment GNST           : 'A' .. 'Z' | 'a' .. 'z' | '_' | '.' ;
-fragment GCCHR          : GNST | '0' .. '9' ; // XXX removed hyphen 
+fragment GCCHR          : GNST | '0' .. '9' | '-' ;
 GCLASS                  : '@' GCCHR+ ;
 
 CID                     : '\\' ( '0' .. '9' )+ ;
-fragment GNCHR          : GCCHR | '-' | '+' | '*' | ':' | '~' | '^' | '|' ; // XXX ! -> |
+fragment GNCHR          : GCCHR | '+' | '*' | ':' | '~' | '^' | '|' ; // XXX ! -> |
 ESCGNAME                : '\\' GNST GNCHR* ;
 NAMELABEL               : GNST GCCHR* ;
 EXTNAME                 : GNST GNCHR* ;
@@ -163,7 +163,7 @@ NUMOCT                  : '0' ( '0' .. '7' )+ ;
 NUM                     : '-'? ( '1' .. '9' ( '0' .. '9' )* | '0' ) ;
 fragment TSTART         :  '!' | '$' | '%' | '&' | '*' | '+' | '.' | ':' | '?' |
                            'A' .. 'Z' | '^' .. 'z' | '|' | '~' ; // XXX Reduced character set
-fragment TCHR           : TSTART | '0' .. '9' ;
+fragment TCHR           : TSTART | '0' .. '9' | '-' ;
 CATCHTAG                : TSTART TCHR? ; // XXX can't start tag with digit
 
 mode Include;

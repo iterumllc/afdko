@@ -68,8 +68,8 @@ add_library(hotconv STATIC
 )
 
 set_property(TARGET hotconv PROPERTY C_STANDARD 99)
-set_property(TARGET hotconv PROPERTY CXX_STANDARD 11)
-target_include_directories(hotconv PRIVATE AFTER $<$<COMPILE_LANGUAGE:CXX>:/usr/include/antlr4-runtime>)
+target_include_directories(hotconv PRIVATE AFTER $<$<COMPILE_LANGUAGE:CXX>:${ANTLR4_INCLUDE_DIRS}>)
+target_link_libraries(hotconv PUBLIC antlr4_static)
 
 if ( CMAKE_COMPILER_IS_GNUCC )
     target_compile_options(hotconv PRIVATE -Wall -Wno-attributes)

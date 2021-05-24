@@ -16,7 +16,7 @@ extraction:
 path_classifiers:
   generated:
     # Classify files generated from featgram.g as generated code so no alerts:
-    - c/makeotf/lib/hotconv/featerr.c
-    - c/makeotf/lib/hotconv/featgram.c
-    - c/makeotf/lib/hotconv/featscan.c
-    - c/makeotf/lib/hotconv/feattoks.h
+    - c/makeotf/lib/hotconv/FeatParser.cpp
+    - c/makeotf/lib/hotconv/FeatLexer.cpp
+    - c/makeotf/lib/hotconv/FeatParserVisitor.cpp
+    - c/makeotf/lib/hotconv/FeatParserBaseVisitor.cpp

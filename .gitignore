@@ -23,8 +23,5 @@ htmlcov
 *.gcda
 cov*.xml
 
-# ANTLR binaries
-**/hotpccts/pccts/bin/**
-
 # temp output dirs created during tests
 **/temp_output

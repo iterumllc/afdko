@@ -14,6 +14,15 @@ endif()
 
 message(STATUS "Build type is ${CMAKE_BUILD_TYPE}")
 
+set(CMAKE_CXX_STANDARD 11)
+
+# Antlr 4 configuration
+list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
+add_definitions(-DANTLR4CPP_STATIC)
+set(ANTLR4_WITH_STATIC_CRT OFF)
+include(ExternalAntlr4Cpp)
+set(ANTLR4_TAG tags/4.9.2)
+
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 if(WIN32)

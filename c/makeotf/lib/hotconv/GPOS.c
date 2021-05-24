@@ -1775,7 +1775,7 @@ void GPOSAddPair(hotCtx g, void *subtableInfo, GNode *first, GNode *second, cons
             valFmt1 = (unsigned short) ValueXAdvance;
         }
     } else {
-        assert( first->metricsInfo.cnt == 4 );
+        assert(first->metricsInfo.cnt == 4);
         valFmt1 = makeValueFormat(g, values1[0], values1[1], values1[2], values1[3]);
         if (valFmt1 == 0) {
             /* If someone has specified a value of <0 0 0 0>, then valFmt   */
@@ -1798,7 +1798,7 @@ void GPOSAddPair(hotCtx g, void *subtableInfo, GNode *first, GNode *second, cons
                 valFmt2 = (unsigned short) ValueXAdvance;
             }
         } else {
-            assert( second->metricsInfo.cnt == 4 );
+            assert(second->metricsInfo.cnt == 4);
             valFmt2 = makeValueFormat(g, values2[0], values2[1], values2[2], values2[3]);
             if (valFmt2 == 0) {
                 /* If someone has specified a value of <0 0 0 0>, then      */
@@ -1870,8 +1870,7 @@ void GPOSAddPair(hotCtx g, void *subtableInfo, GNode *first, GNode *second, cons
         first->nextSeq = second;
         if (first->nextCl == NULL && second->nextCl == NULL) {
             addSpecPair(g, first->gid, second->gid, metricsCnt1, values1, metricsCnt2, values2);
-        }
-        else {
+        } else {
             /* Enumerate */
             unsigned i;
             unsigned length;
@@ -1990,7 +1989,7 @@ static void addPosRule(hotCtx g, GPOSCtx h, SubtableInfo *si, GNode *targ, const
                     /* assume it is an xAdvance adjustment */
                     GPOSAddSingle(g, anon_si, nextNode, 0, 0, nextNode->metricsInfo.metrics[0], 0);
                 } else {
-                    assert( nextNode->metricsInfo.cnt == 4 );
+                    assert(nextNode->metricsInfo.cnt == 4);
                     short *metrics = nextNode->metricsInfo.metrics;
 
                     GPOSAddSingle(g, anon_si, nextNode, metrics[0], metrics[1],
@@ -2015,7 +2014,7 @@ static void addPosRule(hotCtx g, GPOSCtx h, SubtableInfo *si, GNode *targ, const
                 /* assume it is an xAdvance adjustment */
                 GPOSAddSingle(g, si, targ, 0, 0, targ->metricsInfo.metrics[0], 0);
             } else {
-                assert( targ->metricsInfo.cnt == 4 );
+                assert(targ->metricsInfo.cnt == 4);
                 short *metrics = targ->metricsInfo.metrics;
 
                 GPOSAddSingle(g, si, targ, metrics[0], metrics[1],
@@ -2023,8 +2022,7 @@ static void addPosRule(hotCtx g, GPOSCtx h, SubtableInfo *si, GNode *targ, const
             }
         }
         return;
-    }
-    else if (lkpType == GPOSPair) {
+    } else if (lkpType == GPOSPair) {
         /* metrics are now associated with the node they follow */
         GPOSAddPair(g, si, targ, targ->nextSeq, locDesc);
         return;
@@ -2784,7 +2782,7 @@ static int cmpWithPosRule(GNode *targ, SingleRec *cmpRec, int nFound) {
         metrics2[3] = cmpRec->yAdv;
     }
 
-    assert( metricsCnt1 != -1 );
+    assert(metricsCnt1 != -1);
 
     for (; t1 != NULL; t1 = t1->nextCl) {
         if ((t1->gid == gid2) && (!(t1->flags & FEAT_MISC))) {

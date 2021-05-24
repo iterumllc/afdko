@@ -641,8 +641,7 @@ static void addRule(hotCtx g, GSUBCtx h, SubtableInfo *si, GNode *targ,
             rule->repl = repl;
         }
         return;
-    }
-    else if (si->lkpType == GSUBLigature) {
+    } else if (si->lkpType == GSUBLigature) {
         GNode *t;
         unsigned length = featGetPatternLen(g, targ);
 
@@ -1262,7 +1261,7 @@ static void fillMultiple1(hotCtx g, GSUBCtx h, long beg, long end, long size,
                           unsigned int nSubs) {
     otlTbl otl;
     Subtable *sub;
-    //int isRTL;
+    // int isRTL;
     unsigned nSequences;
     GID *pSubs;
     long i;
@@ -1280,7 +1279,7 @@ static void fillMultiple1(hotCtx g, GSUBCtx h, long beg, long end, long size,
     startNewSubtable(g);
     sub = h->new.sub;
     otl = sub->extension.use ? sub->extension.otl : h->otl;
-    //isRTL = sub->lkpFlag & otlRightToLeft;
+    // isRTL = sub->lkpFlag & otlRightToLeft;
 
     fmt->SubstFormat = 1;
     fmt->SequenceCount = nSequences = end - beg + 1;
@@ -1462,8 +1461,8 @@ typedef struct {
 #define ALTERNATE_SET_SIZE(nGlyphs) (uint16 + uint16 * (nGlyphs))
 
 typedef struct {
-    unsigned short SubstFormat; /* =1 */
-    LOffset Coverage;           /* 32-bit for overflow check */
+    unsigned short SubstFormat;  /* =1 */
+    LOffset Coverage;            /* 32-bit for overflow check */
     unsigned short AlternateSetCount;
     DCL_OFFSET_ARRAY(AlternateSet, AlternateSet); /* [AlternateSetCount] */
 } AlternateSubstFormat1;

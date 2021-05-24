@@ -485,7 +485,7 @@ static void writeMetaInfo(ufwCtx h) {
 static void writeBlueValues(ufwCtx h, abfPrivateDict *privateDict){
     char buffer[FILENAME_MAX];
     int i;
-    
+
     /* All the Blue values */
     if (privateDict->BlueValues.cnt != ABF_EMPTY_ARRAY) {
         writeLine(h, "\t<key>postscriptBlueValues</key>");
@@ -641,7 +641,7 @@ static void writeBlueValues(ufwCtx h, abfPrivateDict *privateDict){
         sprintf(buffer, "\t<integer>%d</integer>", (int)privateDict->LanguageGroup);
         writeLine(h, buffer);
     }
-    
+
     if (privateDict->ExpansionFactor != cff_DFLT_ExpansionFactor){
         writeLine(h, "\t<key>ExpansionFactor</key>");
         sprintf(buffer, "\t<real>%.2f</real>", privateDict->ExpansionFactor);
@@ -845,7 +845,7 @@ static int writeFontInfo(ufwCtx h, abfTopDict *top) {
         writeLine(h, "\t<key>postscriptIsFixedPitch</key>");
         writeLine(h, "\t<true/>");
     }
-    
+
     if (top->sup.flags & ABF_CID_FONT) {
         writeLine(h, "\t<key>FSType</key>");
         sprintf(buffer, "\t<integer>%d</integer>", (int)h->top->FSType);
@@ -881,7 +881,7 @@ static int writeFontInfo(ufwCtx h, abfTopDict *top) {
                 writeLine(h, buffer);
             }
             writeLine(h, "\t</array>");
-    
+
             privateDict = &(fd->Private);
             writeLine(h, "\t<key>PrivateDict</key>");
             writeLine(h, "\t<dict>");

@@ -1863,7 +1863,7 @@ static int parseFontInfo(ufoCtx h) {
         } else if (tokenEqualStr(tk, "<dict>")) {
             if (state == 3){
                 state = 5;
-                if (prevState == 5) { //NOT first fdict in FDArray
+                if (prevState == 5) {  // NOT first fdict in FDArray
                     currentiFD = currentiFD + 1;
                     h->top.FDArray.cnt = h->top.FDArray.cnt + 1;
                     if (h->top.FDArray.cnt > FDArrayInitSize){ /* Memory needs reallocation*/
@@ -1909,7 +1909,7 @@ static int parseFontInfo(ufoCtx h) {
                 state = 2;
             }
         } else if (tokenEqualStr(tk, "<array>")) {
-            if (state != 2 && state<5) {
+            if (state != 2 && state < 5) {
                 fatal(h, ufoErrParse, "Encountered <array> when not after <key> element, in fontinfo.plist file. Context: '%s'.\n", getBufferContextPtr(h));
             } else {
                 if (state >= 5){
@@ -1920,7 +1920,7 @@ static int parseFontInfo(ufoCtx h) {
             dnaSET_CNT(h->valueArray, 0);
         } else if (tokenEqualStr(tk, "</array>")) {
             if (state == 5) {
-                if (h->top.FDArray.array != &h->fdict){ //if more memory was allocated for FDArray
+                if ( h->top.FDArray.array != &h->fdict ) {  // if more memory was allocated for FDArray
                     memFree(h, h->top.FDArray.array);
                 }
                 state = 1;
@@ -3754,7 +3754,7 @@ int ufoBegFont(ufoCtx h, long flags, abfTopDict** top, char* altLayerDir) {
     /* Initialize */
     abfInitTopDict(&h->top);
     abfInitFontDict(&h->fdict);
-    
+
     h->top.FDArray.cnt = 1;
     h->top.FDArray.array = &h->fdict;
 

@@ -46,7 +46,7 @@ bool FeatCtx::LangSys::operator==(const FeatCtx::LangSys &b) const {
 }
 
 bool FeatCtx::State::operator==(const FeatCtx::State &b) const {
-    return memcmp(this, &b, sizeof(State))==0;
+    return memcmp(this, &b, sizeof(State)) == 0;
 }
 
 bool FeatCtx::AALT::FeatureRecord::operator==(const FeatCtx::AALT::FeatureRecord &b) const {
@@ -126,7 +126,7 @@ void FeatCtx::freeBlocks() {
 
 GNode *FeatCtx::newNodeFromBlock() {
     auto &bl = blockList;
-    if ( bl.first == nullptr || bl.cnt == (bl.curr==bl.first ? bl.intl : bl.incr) )
+    if ( bl.first == nullptr || bl.cnt == (bl.curr == bl.first ? bl.intl : bl.incr) )
         addBlock();
     return bl.curr->data + bl.cnt++;
 }
@@ -287,7 +287,7 @@ void FeatCtx::recycleNodes(GNode *node) {
 // ---------------------------- Console messages -----------------------------
 
 void FeatCtx::msgPrefix(char **premsg, char **prefix) {
-    assert( premsg != nullptr && prefix != nullptr );
+    assert(premsg != nullptr && prefix != nullptr);
     *premsg = *prefix = nullptr;
 
     if ( current_visitor == nullptr )
@@ -338,7 +338,7 @@ void FeatCtx::featMsg(int msgType, FeatVisitor *v,
 }
 
 const char *FeatCtx::tokstr() {
-    assert( current_visitor != NULL );
+    assert(current_visitor != NULL);
     return current_visitor->currentTokStr();
 }
 
@@ -532,7 +532,7 @@ void FeatCtx::sortGlyphClass(GNode **list, bool unique, bool reportDups) {
 }
 
 void FeatCtx::resetCurrentGC() {
-    assert( curGCHead == nullptr && curGCTailAddr == NULL && curGCName.empty());
+    assert(curGCHead == nullptr && curGCTailAddr == NULL && curGCName.empty());
     curGCTailAddr = &curGCHead;
 }
 
@@ -612,7 +612,7 @@ void FeatCtx::addAlphaRangeToCurrentGC(GID first, GID last,
                                        const char *firstName, const char *p,
                                        char q) {
     int l = strlen(firstName)+1;
-    char *gname = (char *) MEM_NEW(g, l); // Extra shouldn't be needed
+    char *gname = (char *) MEM_NEW(g, l);  // Extra shouldn't be needed
     char *ptr;
 
     strcpy(gname, firstName);
@@ -634,7 +634,7 @@ void FeatCtx::addNumRangeToCurrentGC(GID first, GID last, const char *firstName,
     long i, l = strlen(firstName)+1;
     long firstNum = getNum(p1, numLen);
     long lastNum = getNum(q1, numLen);
-    char *gname = (char *) MEM_NEW(g, l+3); // Extra shouldn't be needed
+    char *gname = (char *) MEM_NEW(g, l+3);  // Extra shouldn't be needed
     char *preNum = (char *) MEM_NEW(g, l);
     char fmt[128];
 
@@ -916,9 +916,9 @@ bool FeatCtx::tagAssign(Tag tag, enum TagType type, bool checkIfDef) {
         return false;
     }
 
-    if (checkIfDef && ta->find(tag) != ta->end() ) {
+    if (checkIfDef && ta->find(tag) != ta->end()) {
         if ((type == featureTag)) {
-            assert( t != NULL );
+            assert(t != NULL);
             *t = tag;
         }
         return false;
@@ -980,7 +980,7 @@ int FeatCtx::startScriptOrLang(TagType type, Tag tag) {
         curr.lkpFlag = 0;
         curr.markSetIndex = 0;
     } else {
-        assert( type == languageTag );
+        assert(type == languageTag);
         if (tag == DFLT_) {
             tag = dflt_;
             featMsg(hotWARNING, "'DFLT' is not a valid tag for a language statement; using 'dflt'.");
@@ -1015,7 +1015,7 @@ void FeatCtx::includeDFLT(bool includeDFLT, int langChange, bool seenOD) {
     if (langChange) {
         include_dflt = includeDFLT;
     } else if (includeDFLT != include_dflt) {
-        featMsg(hotERROR, 
+        featMsg(hotERROR,
             "can't change whether a language should include dflt rules once "
             "this has already been indicated");
     }
@@ -1198,12 +1198,12 @@ void FeatCtx::closeFeatScriptLang(State &st) {
     if ( st.tbl == TAG_UNDEF )
         return;
 
-    if ( st.tbl == GSUB_) {
+    if ( st.tbl == GSUB_ ) {
         if ( st.lkpType != 0 )
             GSUBLookupEnd(g, st.feature);
         g->error_id_text[0] = '\0';
         GSUBFeatureEnd(g);
-    } else if ( st.tbl == GPOS_) {
+    } else if ( st.tbl == GPOS_ ) {
         if ( st.lkpType != 0 )
             GPOSLookupEnd(g, st.feature);
         g->error_id_text[0] = '\0';
@@ -1290,7 +1290,7 @@ void FeatCtx::endLookup() {
     DF(2, (stderr, "# at end of named lookup %s\n", c->name.c_str()));
 
     if (c->isTopLevel)
-        endFeature(); 
+        endFeature();
 
     endOfNamedLkpOrRef = true;
 
@@ -1432,7 +1432,7 @@ FeatCtx::NamedLkp *FeatCtx::lab2NamedLkp(Label lab) {
 }
 
 Label FeatCtx::getNextNamedLkpLabel(const std::string &str, bool isa) {
-    static_assert( FEAT_NAMED_LKP_BEG == 0 );
+    static_assert(FEAT_NAMED_LKP_BEG == 0);
     if (namedLkp.size() >= FEAT_NAMED_LKP_END) {
         featMsg(hotFATAL,
                 "[internal] maximum number of named lookups reached:"
@@ -1725,7 +1725,7 @@ void FeatCtx::addMark(const std::string &name, GNode *targ) {
         copyStr(g, &curGCHead->markClassName, name.c_str());
     }
 
-    finishCurrentGC(); // Save new entry if needed
+    finishCurrentGC();  // Save new entry if needed
 
     /* add mark glyphs to default base class */
     openAsCurrentGC(kDEFAULT_MARKCLASS_NAME);
@@ -1774,7 +1774,7 @@ void FeatCtx::prepRule(Tag newTbl, int newlkpType, GNode *targ, GNode *repl) {
         /* Start registering rules under the first language system (register */
         /* under the rest of the language systems at end of feature).        */
         auto fls = langSysMap.cbegin();
-        assert ( fls !=langSysMap.cend() );
+        assert(fls !=langSysMap.cend());
         tagAssign(fls->first.script, scriptTag, false);
         tagAssign(fls->first.lang, languageTag, false);
     }
@@ -1883,7 +1883,7 @@ void FeatCtx::prepRule(Tag newTbl, int newlkpType, GNode *targ, GNode *repl) {
         /* other language systems at end of feature                     */
         if (fFlags & langSysMode)
             lookup.emplace_back((LookupInfo) { curr.tbl, curr.lkpType, curr.lkpFlag,
-                                curr.markSetIndex, curr.label, useExtension } );
+                                curr.markSetIndex, curr.label, useExtension });
         setIDText();
 
         /* --- COPY CURRENT TO PREVIOUS STATE: */
@@ -2063,7 +2063,7 @@ bool FeatCtx::validateGSUBReverseChain(GNode *targ, GNode *repl) {
     for (p = targ; p != NULL; p = p->nextSeq) {
         if (p->flags & FEAT_MARKED) {
             if (++nMarked == 1) {
-                ; // m = p;
+                ;  // m = p;
             }
         } else if (p->nextSeq != NULL && p->nextSeq->flags & FEAT_MARKED && nMarked > 0) {
             featMsg(hotERROR, "Reverse contextual GSUB rule may must have one and only one glyph or class marked for replacement");
@@ -2677,7 +2677,7 @@ void FeatCtx::addCVNameID(int labelID) {
         case kCVParameterLabelEnum: {
             if ( cvParameters.FirstParamUILabelNameID == 0 )
                 cvParameters.FirstParamUILabelNameID = featNameID;
-            else if ( cvParameters.FirstParamUILabelNameID + 
+            else if ( cvParameters.FirstParamUILabelNameID +
                       cvParameters.NumNamedParameters != featNameID )
                 featMsg(hotERROR, "Character variant AParamUILabelNameID statements must be contiguous.");
             cvParameters.NumNamedParameters++;
@@ -2993,7 +2993,7 @@ void FeatCtx::aaltCreate() {
     while ( single_end != sortTmp.end() && is_glyph((*single_end)->repl) )
         single_end++;
 
-    if ( single_end != sortTmp.begin() && single_end != sortTmp.end()) {
+    if ( single_end != sortTmp.begin() && single_end != sortTmp.end() ) {
         /* If the repl GID of a SingleSub rule is the same as an AltSub    */
         /* rule's targ GID, then the SingleSub rule sinks to the bottom of */
         /* the SingleSub rules, and becomes part of the AltSub rules       */
@@ -3032,7 +3032,7 @@ void FeatCtx::aaltCreate() {
     }
 
     auto i = langSysMap.cbegin();
-    assert( i != langSysMap.cend() );
+    assert(i != langSysMap.cend());
     GSUBFeatureBegin(g, i->first.script, i->first.lang, aalt_);
 
     /* --- Feed in single subs --- */
@@ -3050,7 +3050,7 @@ void FeatCtx::aaltCreate() {
         labelAlternate = getNextAnonLabel();
         GSUBLookupBegin(g, GSUBAlternate, 0, labelAlternate, aalt.useExtension, 0);
         for (auto i = single_end; i != sortTmp.end(); i++) {
-            aaltRuleSort(&(*i)->repl); // sort alts in order of feature def
+            aaltRuleSort(&(*i)->repl);  // sort alts in order of feature def
                                        // in aalt feature
             GSUBRuleAdd(g, (*i)->targ, (*i)->repl);
         }
@@ -3128,7 +3128,7 @@ void FeatCtx::storeRuleInfo(GNode *targ, GNode *repl) {
         }
 
         if (curr.feature != aalt_) {
-            assert( f != std::end(aalt.features) );
+            assert(f != std::end(aalt.features));
             f->used = true;
         }
         aaltAddAlternates(targ, repl);
@@ -3189,14 +3189,14 @@ GNode **FeatCtx::makeCrossProduct(GNode *pat, unsigned *n) {
 // -------------------------------- C Hooks -----------------------------------
 
 inline FeatCtx *hctofc(hotCtx g) {
-    assert( g->ctx.feat != nullptr );
+    assert(g->ctx.feat != nullptr);
     return (FeatCtx *) g->ctx.feat;
 }
 
 extern "C" {
 
 void featNew(hotCtx g) {
-    assert( g->ctx.feat == nullptr );
+    assert(g->ctx.feat == nullptr);
     FeatCtx *hfp = new FeatCtx(g);
     g->ctx.feat = (void *) hfp;
 }
@@ -3208,7 +3208,7 @@ void featFree(hotCtx g) {
 
 // Prior to Antlr 4 the old code reset the context here but with an object
 // that's an invitation for bugs so just reallocate.
-void featReuse(hotCtx g) { 
+void featReuse(hotCtx g) {
     featFree(g);
     featNew(g);
 }
@@ -3275,4 +3275,4 @@ int featValidateGPOSChain(hotCtx g, GNode *targ, int lookupType) {
     return hctofc(g)->validateGPOSChain(targ, lookupType);
 }
 
-} // extern "C"
+}  // extern "C"

@@ -1464,7 +1464,7 @@ void CDECL hotMsg(hotCtx g, int level, const char *fmt, ...) {
             } else { */
                 p = message;
             // }
-            if ( level != hotHEADING ) { // Don't print headings for headings
+            if ( level != hotHEADING ) {  // Don't print headings for headings
                 char *premsg, *prefix;
                 featMsgPrefix(g, &premsg, &prefix);
                 // Usually information that the file has changed

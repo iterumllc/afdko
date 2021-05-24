@@ -53,6 +53,9 @@ These options can be added to the end of the first CMake command above:
 1. To change the "install prefix" (which is `/usr/local` by default) to `usr` add `-DCMAKE\_INSTALL\_PREFIX=/usr`
 2. To build with debugging symbols and assertions add `-DCMAKE_BUILD_TYPE=Debug`
 3. To build with `ninja` rather than `make` add `-GNinja`
+4. To build XCode project files use `-GXcode`
+5. More recent versions of Visual Studio (e.g. 2019) should recognize `CMakeLists.txt` files. Just open the main project folder.
+6. To add a sanitizer add `-DADD_SANITIZER=[san]`, where `[san]` is `address`, `memory`, etc. (Currently only works with compilers that support GCC-style directives.)
 
 #### Document Version History
 Version 1.0.0  

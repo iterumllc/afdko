@@ -105,7 +105,7 @@ cvParameterStatement:
     ( cvParameter
     | include
     ) SEMI
-;   
+;
 
 cvParameter:
       ( CV_UI_LABEL | CV_TOOLTIP | CV_SAMPLE_TEXT | CV_PARAM_LABEL ) LCBRACE
@@ -169,7 +169,7 @@ substitute:
 
 position:
     enumtok? postok startpat=pattern?
-    ( 
+    (
         ( valueRecord valuePattern* )
       | ( ( LOOKUP label )+ lookupPatternElement* )
       | ( CURSIVE cursiveElement endpat=pattern? )
@@ -235,7 +235,7 @@ baseStatement:
 ;
 
 axisTags:
-    ( HA_BTL | VA_BTL ) tag+ 
+    ( HA_BTL | VA_BTL ) tag+
 ;
 
 axisScripts:
@@ -275,15 +275,25 @@ gdefAttach:
 gdefLigCaretPos:
     LIG_CARET_BY_POS lookupPattern NUM+
 ;
-    
+
 gdefLigCaretIndex:
     LIG_CARET_BY_IDX lookupPattern NUM+
 ;
 
 table_head:
     HEAD LCBRACE
-    ( FONT_REVISION POINTNUM )? SEMI
+    headStatement+
     RCBRACE HEAD SEMI
+;
+
+headStatement:
+    ( head
+    | include
+    ) SEMI
+;
+
+head:
+    FONT_REVISION POINTNUM
 ;
 
 table_hhea:
@@ -347,7 +357,7 @@ os_2Statement:
 ;
 
 os_2:
-      ( TYPO_ASCENDER | TYPO_DESCENDER | TYPO_LINE_GAP 
+      ( TYPO_ASCENDER | TYPO_DESCENDER | TYPO_LINE_GAP
       | WIN_ASCENT | WIN_DESCENT | X_HEIGHT | CAP_HEIGHT ) num=NUM
     |
       ( FS_TYPE | FS_TYPE_v | WEIGHT_CLASS | WIDTH_CLASS
@@ -357,7 +367,7 @@ os_2:
     | PANOSE NUM NUM NUM NUM NUM NUM NUM NUM NUM NUM
     | ( UNICODE_RANGE | CODE_PAGE_RANGE ) NUM+
 ;
-    
+
 
 table_STAT:
     STAT LCBRACE
@@ -522,6 +532,10 @@ baseFile:
     baseStatement* EOF
 ;
 
+headFile:
+    headStatement* EOF
+;
+
 hheaFile:
     hheaStatement* EOF
 ;
@@ -558,7 +572,7 @@ nameEntryFile:
     nameEntryStatement* EOF
 ;
 
-/* These tokens are defined this way because they slightly improves 
+/* These tokens are defined this way because they slightly improves
  * Antlr 4's default error reporting.  If we wind up overloading the
  * class with the token literals at the C++ level I will devolve these
  * back into the Lexer grammar.

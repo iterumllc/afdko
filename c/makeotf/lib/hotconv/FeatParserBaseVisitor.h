@@ -207,6 +207,14 @@ public:
     return visitChildren(ctx);
   }
 
+  virtual antlrcpp::Any visitHeadStatement(FeatParser::HeadStatementContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
+  virtual antlrcpp::Any visitHead(FeatParser::HeadContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
   virtual antlrcpp::Any visitTable_hhea(FeatParser::Table_hheaContext *ctx) override {
     return visitChildren(ctx);
   }
@@ -384,6 +392,10 @@ public:
   }
 
   virtual antlrcpp::Any visitBaseFile(FeatParser::BaseFileContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
+  virtual antlrcpp::Any visitHeadFile(FeatParser::HeadFileContext *ctx) override {
     return visitChildren(ctx);
   }
 

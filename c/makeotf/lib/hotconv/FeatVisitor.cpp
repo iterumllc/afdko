@@ -914,9 +914,22 @@ antlrcpp::Any FeatVisitor::visitGdefLigCaretIndex(FeatParser::GdefLigCaretIndexC
 }
 
 antlrcpp::Any FeatVisitor::visitTable_head(FeatParser::Table_headContext *ctx) {
+    EntryPoint tmp_ep = include_ep;
+    include_ep = &FeatParser::headFile;
+    if ( stage == vExtract ) {
+        fc->startTable(fc->str2tag(TOK(ctx->HEAD(0))->getText()));
+    }
+
+    for (auto i : ctx->headStatement())
+        visitHeadStatement(i);
+
+    include_ep = tmp_ep;
+    return nullptr;
+}
+
+antlrcpp::Any FeatVisitor::visitHead(FeatParser::HeadContext *ctx) {
     if ( stage != vExtract )
         return nullptr;
-    fc->startTable(fc->str2tag(TOK(ctx->HEAD(0))->getText()));
 
     const std::string s = TOK(ctx->POINTNUM())->getText();
     if ( s[0] == '-' )

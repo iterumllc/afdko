@@ -59,23 +59,24 @@ public:
     RuleTable_BASE = 36, RuleBaseStatement = 37, RuleAxisTags = 38, RuleAxisScripts = 39, 
     RuleBaseScript = 40, RuleTable_GDEF = 41, RuleGdefStatement = 42, RuleGdefGlyphClass = 43, 
     RuleGdefAttach = 44, RuleGdefLigCaretPos = 45, RuleGdefLigCaretIndex = 46, 
-    RuleTable_head = 47, RuleTable_hhea = 48, RuleHheaStatement = 49, RuleHhea = 50, 
-    RuleTable_vhea = 51, RuleVheaStatement = 52, RuleVhea = 53, RuleTable_name = 54, 
-    RuleNameStatement = 55, RuleNameID = 56, RuleTable_OS_2 = 57, RuleOs_2Statement = 58, 
-    RuleOs_2 = 59, RuleTable_STAT = 60, RuleStatStatement = 61, RuleDesignAxis = 62, 
-    RuleAxisValue = 63, RuleAxisValueStatement = 64, RuleAxisValueLocation = 65, 
-    RuleAxisValueFlags = 66, RuleElidedFallbackName = 67, RuleNameEntryStatement = 68, 
-    RuleElidedFallbackNameID = 69, RuleNameEntry = 70, RuleTable_vmtx = 71, 
-    RuleVmtxStatement = 72, RuleVmtx = 73, RuleAnchor = 74, RuleLookupPattern = 75, 
-    RuleLookupPatternElement = 76, RulePattern = 77, RulePatternElement = 78, 
-    RuleGlyphClassOptional = 79, RuleGlyphClass = 80, RuleGcLiteral = 81, 
-    RuleGcLiteralElement = 82, RuleGlyph = 83, RuleGlyphName = 84, RuleLabel = 85, 
-    RuleTag = 86, RuleFixedNum = 87, RuleGenNum = 88, RuleFeatureFile = 89, 
-    RuleStatementFile = 90, RuleCvStatementFile = 91, RuleBaseFile = 92, 
-    RuleHheaFile = 93, RuleVheaFile = 94, RuleGdefFile = 95, RuleNameFile = 96, 
-    RuleVmtxFile = 97, RuleOs_2File = 98, RuleStatFile = 99, RuleAxisValueFile = 100, 
-    RuleNameEntryFile = 101, RuleSubtok = 102, RuleRevtok = 103, RuleAnontok = 104, 
-    RuleEnumtok = 105, RulePostok = 106, RuleMarkligtok = 107
+    RuleTable_head = 47, RuleHeadStatement = 48, RuleHead = 49, RuleTable_hhea = 50, 
+    RuleHheaStatement = 51, RuleHhea = 52, RuleTable_vhea = 53, RuleVheaStatement = 54, 
+    RuleVhea = 55, RuleTable_name = 56, RuleNameStatement = 57, RuleNameID = 58, 
+    RuleTable_OS_2 = 59, RuleOs_2Statement = 60, RuleOs_2 = 61, RuleTable_STAT = 62, 
+    RuleStatStatement = 63, RuleDesignAxis = 64, RuleAxisValue = 65, RuleAxisValueStatement = 66, 
+    RuleAxisValueLocation = 67, RuleAxisValueFlags = 68, RuleElidedFallbackName = 69, 
+    RuleNameEntryStatement = 70, RuleElidedFallbackNameID = 71, RuleNameEntry = 72, 
+    RuleTable_vmtx = 73, RuleVmtxStatement = 74, RuleVmtx = 75, RuleAnchor = 76, 
+    RuleLookupPattern = 77, RuleLookupPatternElement = 78, RulePattern = 79, 
+    RulePatternElement = 80, RuleGlyphClassOptional = 81, RuleGlyphClass = 82, 
+    RuleGcLiteral = 83, RuleGcLiteralElement = 84, RuleGlyph = 85, RuleGlyphName = 86, 
+    RuleLabel = 87, RuleTag = 88, RuleFixedNum = 89, RuleGenNum = 90, RuleFeatureFile = 91, 
+    RuleStatementFile = 92, RuleCvStatementFile = 93, RuleBaseFile = 94, 
+    RuleHeadFile = 95, RuleHheaFile = 96, RuleVheaFile = 97, RuleGdefFile = 98, 
+    RuleNameFile = 99, RuleVmtxFile = 100, RuleOs_2File = 101, RuleStatFile = 102, 
+    RuleAxisValueFile = 103, RuleNameEntryFile = 104, RuleSubtok = 105, 
+    RuleRevtok = 106, RuleAnontok = 107, RuleEnumtok = 108, RulePostok = 109, 
+    RuleMarkligtok = 110
   };
 
   explicit FeatParser(antlr4::TokenStream *input);
@@ -136,6 +137,8 @@ public:
   class GdefLigCaretPosContext;
   class GdefLigCaretIndexContext;
   class Table_headContext;
+  class HeadStatementContext;
+  class HeadContext;
   class Table_hheaContext;
   class HheaStatementContext;
   class HheaContext;
@@ -181,6 +184,7 @@ public:
   class StatementFileContext;
   class CvStatementFileContext;
   class BaseFileContext;
+  class HeadFileContext;
   class HheaFileContext;
   class VheaFileContext;
   class GdefFileContext;
@@ -1062,9 +1066,37 @@ public:
     std::vector<antlr4::tree::TerminalNode *> HEAD();
     antlr4::tree::TerminalNode* HEAD(size_t i);
     antlr4::tree::TerminalNode *LCBRACE();
-    std::vector<antlr4::tree::TerminalNode *> SEMI();
-    antlr4::tree::TerminalNode* SEMI(size_t i);
     antlr4::tree::TerminalNode *RCBRACE();
+    antlr4::tree::TerminalNode *SEMI();
+    std::vector<HeadStatementContext *> headStatement();
+    HeadStatementContext* headStatement(size_t i);
+
+
+    virtual antlrcpp::Any accept(antlr4::tree::ParseTreeVisitor *visitor) override;
+   
+  };
+
+  Table_headContext* table_head();
+
+  class  HeadStatementContext : public antlr4::ParserRuleContext {
+  public:
+    HeadStatementContext(antlr4::ParserRuleContext *parent, size_t invokingState);
+    virtual size_t getRuleIndex() const override;
+    antlr4::tree::TerminalNode *SEMI();
+    HeadContext *head();
+    IncludeContext *include();
+
+
+    virtual antlrcpp::Any accept(antlr4::tree::ParseTreeVisitor *visitor) override;
+   
+  };
+
+  HeadStatementContext* headStatement();
+
+  class  HeadContext : public antlr4::ParserRuleContext {
+  public:
+    HeadContext(antlr4::ParserRuleContext *parent, size_t invokingState);
+    virtual size_t getRuleIndex() const override;
     antlr4::tree::TerminalNode *FONT_REVISION();
     antlr4::tree::TerminalNode *POINTNUM();
 
@@ -1073,7 +1105,7 @@ public:
    
   };
 
-  Table_headContext* table_head();
+  HeadContext* head();
 
   class  Table_hheaContext : public antlr4::ParserRuleContext {
   public:
@@ -1833,6 +1865,21 @@ public:
   };
 
   BaseFileContext* baseFile();
+
+  class  HeadFileContext : public antlr4::ParserRuleContext {
+  public:
+    HeadFileContext(antlr4::ParserRuleContext *parent, size_t invokingState);
+    virtual size_t getRuleIndex() const override;
+    antlr4::tree::TerminalNode *EOF();
+    std::vector<HeadStatementContext *> headStatement();
+    HeadStatementContext* headStatement(size_t i);
+
+
+    virtual antlrcpp::Any accept(antlr4::tree::ParseTreeVisitor *visitor) override;
+   
+  };
+
+  HeadFileContext* headFile();
 
   class  HheaFileContext : public antlr4::ParserRuleContext {
   public:

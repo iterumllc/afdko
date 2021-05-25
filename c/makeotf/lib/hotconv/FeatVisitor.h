@@ -118,6 +118,7 @@ class FeatVisitor : public FeatParserBaseVisitor {
     antlrcpp::Any visitGdefLigCaretIndex(FeatParser::GdefLigCaretIndexContext *ctx) override;
 
     antlrcpp::Any visitTable_head(FeatParser::Table_headContext *ctx) override;
+    antlrcpp::Any visitHead(FeatParser::HeadContext *ctx) override;
 
     antlrcpp::Any visitTable_hhea(FeatParser::Table_hheaContext *ctx) override;
     antlrcpp::Any visitHhea(FeatParser::HheaContext *ctx) override;

@@ -115,6 +115,10 @@ public:
 
     virtual antlrcpp::Any visitTable_head(FeatParser::Table_headContext *context) = 0;
 
+    virtual antlrcpp::Any visitHeadStatement(FeatParser::HeadStatementContext *context) = 0;
+
+    virtual antlrcpp::Any visitHead(FeatParser::HeadContext *context) = 0;
+
     virtual antlrcpp::Any visitTable_hhea(FeatParser::Table_hheaContext *context) = 0;
 
     virtual antlrcpp::Any visitHheaStatement(FeatParser::HheaStatementContext *context) = 0;
@@ -204,6 +208,8 @@ public:
     virtual antlrcpp::Any visitCvStatementFile(FeatParser::CvStatementFileContext *context) = 0;
 
     virtual antlrcpp::Any visitBaseFile(FeatParser::BaseFileContext *context) = 0;
+
+    virtual antlrcpp::Any visitHeadFile(FeatParser::HeadFileContext *context) = 0;
 
     virtual antlrcpp::Any visitHheaFile(FeatParser::HheaFileContext *context) = 0;
 

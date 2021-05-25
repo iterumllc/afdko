@@ -1272,8 +1272,7 @@ void FeatCtx::startLookup(const std::string &name, bool isTopLevel) {
 
     DF(2, (stderr, "# at start of named lookup %s\n", name));
     if (name2NamedLkp(name) != NULL)
-        featMsg(hotFATAL, "lookup name \"%s\" already defined", name);
-        // featMsg(hotFATAL, "lookup name \"%s\" already defined", name.c_str());
+        featMsg(hotFATAL, "lookup name \"%s\" already defined", name.c_str());
 
     currNamedLkp = getNextNamedLkpLabel(name, isTopLevel);
     /* State will be recorded at end of block section, below */

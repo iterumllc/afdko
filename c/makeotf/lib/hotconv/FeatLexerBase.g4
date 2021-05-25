@@ -149,13 +149,14 @@ COMMA                   : ',' ;
 QUOTE                   : '"' -> pushMode(String) ;
 
 fragment GNST           : 'A' .. 'Z' | 'a' .. 'z' | '_' | '.' ;
-fragment GCCHR          : GNST | '0' .. '9' | '-' ;
+fragment LCHR           : GNST | '0' .. '9' ;
+fragment GCCHR          : LCHR | '-' ;
 GCLASS                  : '@' GCCHR+ ;
 
 CID                     : '\\' ( '0' .. '9' )+ ;
 fragment GNCHR          : GCCHR | '+' | '*' | ':' | '~' | '^' | '|' ; // XXX ! -> |
 ESCGNAME                : '\\' GNST GNCHR* ;
-NAMELABEL               : GNST GCCHR* ;
+NAMELABEL               : GNST LCHR* ;
 EXTNAME                 : GNST GNCHR* ;
 POINTNUM                : '-'? ( '0' .. '9' )+ '.' ( '0' .. '9' )+ ;
 NUMEXT                  : '0x' ( '0' .. '9' | 'a' .. 'f' | 'A' .. 'F' )+ ;

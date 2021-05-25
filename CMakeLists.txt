@@ -43,6 +43,9 @@ if(WIN32)
         $<$<CONFIG:Release>:NDEBUG>)
 endif()
 
+include(CheckLibraryExists)
+CHECK_LIBRARY_EXISTS(m floor "" HAVE_M_LIB)
+
 add_subdirectory(c/shared/source)
 add_subdirectory(c/detype1/source)
 add_subdirectory(c/mergefonts/source)

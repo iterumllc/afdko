@@ -22,6 +22,9 @@ target_sources(makeotfexe PRIVATE
 )
 
 target_link_libraries(makeotfexe PRIVATE ctutil dynarr hotconv makeotf_pstoken typecomp makeotf_cffread m)
+if(HAVE_M_LIB)
+    target_link_libraries(makeotfexe PRIVATE m)
+endif()
 target_compile_definitions(makeotfexe PRIVATE MAKEOTFLIB_EXPORTS=1)
 install(TARGETS makeotfexe DESTINATION bin)
 

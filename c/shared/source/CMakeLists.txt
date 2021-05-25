@@ -70,5 +70,8 @@ target_link_libraries(tx_shared PUBLIC
     absfont
     dynarr
     varread
-    m
 )
+
+if(HAVE_M_LIB)
+    target_link_libraries(tx_shared PUBLIC m)
+endif()

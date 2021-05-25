@@ -215,7 +215,7 @@ GNode *FeatCtx::newNode() {
     ret->nextSeq = NULL;
     ret->nextCl = NULL;
     ret->lookupLabelCount = 0;
-    ret->metricsInfo = METRICSINFOEMPTY;
+    ret->metricsInfo = METRICSINFOEMPTYPP;
     ret->aaltIndex = 0;
     ret->markClassName = NULL;
     initAnchor(&ret->markClassAnchorInfo);
@@ -475,7 +475,7 @@ void FeatCtx::sortGlyphClass(GNode **list, bool unique, bool reportDups) {
     MetricsInfo metricsInfo = p->metricsInfo;
     char *markClassName = p->markClassName;
     p->markClassName = NULL;
-    p->metricsInfo = METRICSINFOEMPTY;
+    p->metricsInfo = METRICSINFOEMPTYPP;
     p->nextSeq = NULL;
     p->flags = 0;
 
@@ -1272,7 +1272,8 @@ void FeatCtx::startLookup(const std::string &name, bool isTopLevel) {
 
     DF(2, (stderr, "# at start of named lookup %s\n", name));
     if (name2NamedLkp(name) != NULL)
-        featMsg(hotFATAL, "lookup name \"%s\" already defined", name.c_str());
+        featMsg(hotFATAL, "lookup name \"%s\" already defined", name);
+        // featMsg(hotFATAL, "lookup name \"%s\" already defined", name.c_str());
 
     currNamedLkp = getNextNamedLkpLabel(name, isTopLevel);
     /* State will be recorded at end of block section, below */
@@ -1432,7 +1433,6 @@ FeatCtx::NamedLkp *FeatCtx::lab2NamedLkp(Label lab) {
 }
 
 Label FeatCtx::getNextNamedLkpLabel(const std::string &str, bool isa) {
-    static_assert(FEAT_NAMED_LKP_BEG == 0);
     if (namedLkp.size() >= FEAT_NAMED_LKP_END) {
         featMsg(hotFATAL,
                 "[internal] maximum number of named lookups reached:"
@@ -1882,8 +1882,8 @@ void FeatCtx::prepRule(Tag newTbl, int newlkpType, GNode *targ, GNode *repl) {
         /* If LANGSYS mode, snapshot lookup info for registration under */
         /* other language systems at end of feature                     */
         if (fFlags & langSysMode)
-            lookup.emplace_back((LookupInfo) { curr.tbl, curr.lkpType, curr.lkpFlag,
-                                curr.markSetIndex, curr.label, useExtension });
+            lookup.emplace_back(curr.tbl, curr.lkpType, curr.lkpFlag,
+                                curr.markSetIndex, curr.label, useExtension);
         setIDText();
 
         /* --- COPY CURRENT TO PREVIOUS STATE: */
@@ -2417,7 +2417,7 @@ bool FeatCtx::validateGPOSChain(GNode *targ, int lkpType) {
     /* Check for special case of a single marked node, with one or more lookahead nodes, and a single value record attached to the last node */
     if (seenTerminalMetrics) {
         m->metricsInfo = lastNode->metricsInfo;
-        lastNode->metricsInfo = METRICSINFOEMPTY;
+        lastNode->metricsInfo = METRICSINFOEMPTYPP;
     }
 
     if (targ->flags & FEAT_IGNORE_CLAUSE) {

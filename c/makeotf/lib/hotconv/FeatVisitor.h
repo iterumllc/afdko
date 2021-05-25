@@ -178,34 +178,34 @@ class FeatVisitor : public FeatParserBaseVisitor {
 
     // "Remove" default inherited visitors
 #ifndef NDEBUG
-    antlrcpp::Any visitCursiveElement(FeatParser::CursiveElementContext *ctx) override { assert(false); }
-    antlrcpp::Any visitBaseToMarkElement(FeatParser::BaseToMarkElementContext *ctx) override { assert(false); }
-    antlrcpp::Any visitLigatureMarkElement(FeatParser::LigatureMarkElementContext *ctx) override { assert(false); }
-    antlrcpp::Any visitValuePattern(FeatParser::ValuePatternContext *ctx) override { assert(false); }
-    antlrcpp::Any visitLookupflagElement(FeatParser::LookupflagElementContext *ctx) override { assert(false); }
-    antlrcpp::Any visitValueRecord(FeatParser::ValueRecordContext *ctx) override { assert(false); }
-    antlrcpp::Any visitValueLiteral(FeatParser::ValueLiteralContext *ctx) override { assert(false); }
-    antlrcpp::Any visitAnchor(FeatParser::AnchorContext *ctx) override { assert(false); }
-    antlrcpp::Any visitLookupPattern(FeatParser::LookupPatternContext *ctx) override { assert(false); }
-    antlrcpp::Any visitLookupPatternElement(FeatParser::LookupPatternElementContext *ctx) override { assert(false); }
-    antlrcpp::Any visitPattern(FeatParser::PatternContext *ctx) override { assert(false); }
-    antlrcpp::Any visitPatternElement(FeatParser::PatternElementContext *ctx) override { assert(false); }
-    antlrcpp::Any visitGlyphClassOptional(FeatParser::GlyphClassOptionalContext *ctx) override { assert(false); }
-    antlrcpp::Any visitGlyphClass(FeatParser::GlyphClassContext *ctx) override { assert(false); }
-    antlrcpp::Any visitGcLiteral(FeatParser::GcLiteralContext *ctx) override { assert(false); }
-    antlrcpp::Any visitGcLiteralElement(FeatParser::GcLiteralElementContext *ctx) override { assert(false); }
-    antlrcpp::Any visitGlyph(FeatParser::GlyphContext *ctx) override { assert(false); }
-    antlrcpp::Any visitGlyphName(FeatParser::GlyphNameContext *ctx) override { assert(false); }
-    antlrcpp::Any visitLabel(FeatParser::LabelContext *ctx) override { assert(false); }
-    antlrcpp::Any visitTag(FeatParser::TagContext *ctx) override { assert(false); }
-    antlrcpp::Any visitFixedNum(FeatParser::FixedNumContext *ctx) override { assert(false); }
-    antlrcpp::Any visitGenNum(FeatParser::GenNumContext *ctx) override { assert(false); }
-    antlrcpp::Any visitSubtok(FeatParser::SubtokContext *ctx) override { assert(false); }
-    antlrcpp::Any visitRevtok(FeatParser::RevtokContext *ctx) override { assert(false); }
-    antlrcpp::Any visitAnontok(FeatParser::AnontokContext *ctx) override { assert(false); }
-    antlrcpp::Any visitEnumtok(FeatParser::EnumtokContext *ctx) override { assert(false); }
-    antlrcpp::Any visitPostok(FeatParser::PostokContext *ctx) override { assert(false); }
-    antlrcpp::Any visitMarkligtok(FeatParser::MarkligtokContext *ctx) override { assert(false); }
+    antlrcpp::Any visitCursiveElement(FeatParser::CursiveElementContext *) override { assert(false); }
+    antlrcpp::Any visitBaseToMarkElement(FeatParser::BaseToMarkElementContext *) override { assert(false); }
+    antlrcpp::Any visitLigatureMarkElement(FeatParser::LigatureMarkElementContext *) override { assert(false); }
+    antlrcpp::Any visitValuePattern(FeatParser::ValuePatternContext *) override { assert(false); }
+    antlrcpp::Any visitLookupflagElement(FeatParser::LookupflagElementContext *) override { assert(false); }
+    antlrcpp::Any visitValueRecord(FeatParser::ValueRecordContext *) override { assert(false); }
+    antlrcpp::Any visitValueLiteral(FeatParser::ValueLiteralContext *) override { assert(false); }
+    antlrcpp::Any visitAnchor(FeatParser::AnchorContext *) override { assert(false); }
+    antlrcpp::Any visitLookupPattern(FeatParser::LookupPatternContext *) override { assert(false); }
+    antlrcpp::Any visitLookupPatternElement(FeatParser::LookupPatternElementContext *) override { assert(false); }
+    antlrcpp::Any visitPattern(FeatParser::PatternContext *) override { assert(false); }
+    antlrcpp::Any visitPatternElement(FeatParser::PatternElementContext *) override { assert(false); }
+    antlrcpp::Any visitGlyphClassOptional(FeatParser::GlyphClassOptionalContext *) override { assert(false); }
+    antlrcpp::Any visitGlyphClass(FeatParser::GlyphClassContext *) override { assert(false); }
+    antlrcpp::Any visitGcLiteral(FeatParser::GcLiteralContext *) override { assert(false); }
+    antlrcpp::Any visitGcLiteralElement(FeatParser::GcLiteralElementContext *) override { assert(false); }
+    antlrcpp::Any visitGlyph(FeatParser::GlyphContext *) override { assert(false); }
+    antlrcpp::Any visitGlyphName(FeatParser::GlyphNameContext *) override { assert(false); }
+    antlrcpp::Any visitLabel(FeatParser::LabelContext *) override { assert(false); }
+    antlrcpp::Any visitTag(FeatParser::TagContext *) override { assert(false); }
+    antlrcpp::Any visitFixedNum(FeatParser::FixedNumContext *) override { assert(false); }
+    antlrcpp::Any visitGenNum(FeatParser::GenNumContext *) override { assert(false); }
+    antlrcpp::Any visitSubtok(FeatParser::SubtokContext *) override { assert(false); }
+    antlrcpp::Any visitRevtok(FeatParser::RevtokContext *) override { assert(false); }
+    antlrcpp::Any visitAnontok(FeatParser::AnontokContext *) override { assert(false); }
+    antlrcpp::Any visitEnumtok(FeatParser::EnumtokContext *) override { assert(false); }
+    antlrcpp::Any visitPostok(FeatParser::PostokContext *) override { assert(false); }
+    antlrcpp::Any visitMarkligtok(FeatParser::MarkligtokContext *) override { assert(false); }
 #endif
 
     // State

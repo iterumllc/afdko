@@ -327,7 +327,7 @@ antlrcpp::Any FeatVisitor::visitValueRecordDef(FeatParser::ValueRecordDefContext
     if ( stage != vExtract )
         return nullptr;
 
-    MetricsInfo mi = METRICSINFOEMPTY;
+    MetricsInfo mi = METRICSINFOEMPTYPP;
     getValueLiteral(ctx->valueLiteral(), mi);
     fc->addValueDef(TOK(ctx->label())->getText(), mi);
 
@@ -1579,7 +1579,7 @@ void FeatVisitor::checkLabel(FeatParser::LabelContext *start,
     if ( start == nullptr || end == nullptr ||
          start->getText() != end->getText() )
         fc->featMsg(hotERROR, "End label %s does not match start label %s.",
-                    TOK(end)->getText(), start->getText());
+                    TOK(end)->getText().c_str(), start->getText().c_str());
 }
 
 template <typename T>

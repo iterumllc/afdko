@@ -223,6 +223,10 @@ class FeatCtx {
 
     // Lookups
     struct LookupInfo {
+        LookupInfo(Tag t, int lt, unsigned int lf, unsigned short msi,
+                   Label l, bool ue) : tbl(t), lkpType(lt), lkpFlag(lf),
+                                       markSetIndex(msi), label(l),
+                                       useExtension(ue) {}
         Tag tbl;          // GSUB_ or GPOS_
         int lkpType;      // GSUBsingle, GPOSSingle, etc.
         unsigned int lkpFlag;
@@ -248,9 +252,8 @@ class FeatCtx {
         State state;
         bool useExtension {false}, isTopLevel;
     };
-    // Given that we use vector indices for named labels the first one
-    // better be zero.
-    static_assert(FEAT_NAMED_LKP_BEG == 0);
+    static_assert(FEAT_NAMED_LKP_BEG == 0,
+                  "Named label values must start at zero");
     std::vector<NamedLkp> namedLkp;
     Label currNamedLkp {LAB_UNDEF};
     bool endOfNamedLkpOrRef {false};

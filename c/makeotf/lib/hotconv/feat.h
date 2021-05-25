@@ -26,7 +26,7 @@ extern "C" {
 /* Preferred to 0 for proper otl sorting. This can't conflict with a valid
    tag since tag characters must be in ASCII 32-126. */
 #define TAG_UNDEF 0xFFFFFFFF
-#define TAG_STAND_ALONE ((Tag) { 0x01010101 }) /* Feature, script. language tags used for stand-alone lookups */
+#define TAG_STAND_ALONE 0x01010101 //* Feature, script. language tags used for stand-alone lookups */
 
 #define MAX_FEAT_PARAM_NUM 256
 
@@ -80,6 +80,7 @@ typedef struct {
 } MetricsInfo;
 
 #define METRICSINFOEMPTY (MetricsInfo) { -1, { 0, 0, 0, 0 } }
+#define METRICSINFOEMPTYPP { -1, { 0, 0, 0, 0 } }
 
 typedef struct {
     short int x;

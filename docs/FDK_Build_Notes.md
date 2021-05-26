@@ -57,6 +57,21 @@ These options can be added to the end of the first CMake command above:
 5. More recent versions of Visual Studio (e.g. 2019) should recognize `CMakeLists.txt` files. Just open the main project folder.
 6. To add a sanitizer add `-DADD_SANITIZER=[san]`, where `[san]` is `address`, `memory`, etc. (Currently only works with compilers that support GCC-style directives.)
 
+## Troubleshooting
+
+You may have trouble building the Antlr 4 Cpp runtime on Windows due to git
+being conservative about filename lengths. If you see an error like
+
+```
+  error: unable to create file googletest/xcode/Samples/FrameworkSample/WidgetFramework.xcodeproj/project.pbxproj: Filename too long
+```
+
+Try running:
+
+```
+git config --system core.longpaths true
+```
+
 #### Document Version History
 Version 1.0.0  
 Version 1.2.0 July 18 2019  

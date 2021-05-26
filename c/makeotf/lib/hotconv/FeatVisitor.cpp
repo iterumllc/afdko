@@ -705,6 +705,7 @@ antlrcpp::Any FeatVisitor::visitLookupBlockOrUse(FeatParser::LookupBlockOrUseCon
     if ( stage == vExtract ) {
         if ( ctx->RCBRACE() == nullptr ) {
             fc->useLkp(TOK(ctx->startlabel)->getText());
+            include_ep = tmp_ep;
             return nullptr;
         }
         checkLabel(ctx->startlabel, ctx->endlabel);

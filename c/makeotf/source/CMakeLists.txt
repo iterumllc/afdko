@@ -21,7 +21,7 @@ target_sources(makeotfexe PRIVATE
     systemspecific.h
 )
 
-target_link_libraries(makeotfexe PRIVATE ctutil dynarr hotconv makeotf_pstoken typecomp makeotf_cffread m)
+target_link_libraries(makeotfexe PRIVATE ctutil dynarr hotconv makeotf_pstoken typecomp makeotf_cffread)
 if(HAVE_M_LIB)
     target_link_libraries(makeotfexe PRIVATE m)
 endif()

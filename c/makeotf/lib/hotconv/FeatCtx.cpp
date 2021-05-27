@@ -2879,7 +2879,7 @@ void FeatCtx::aaltRuleSort(GNode **list) {
     struct {
         bool operator()(GNode *a, GNode *b) const { return a->aaltIndex < b->aaltIndex; }
     } cmpNode;
-    std::sort(sortTmp.begin(), sortTmp.end(), cmpNode);
+    std::stable_sort(sortTmp.begin(), sortTmp.end(), cmpNode);
 
     /* Move pointers around */
     for (i = 0; i < sortTmp.size() - 1; i++)
@@ -2979,10 +2979,10 @@ void FeatCtx::aaltCreate() {
             } else if (is_mult_class(a) && is_glyph(b)) {
                 return false;
             } else if (is_mult_class(a) && is_mult_class(b)) {
-                /* Sort alt sub rules by targ GID XXX not sure this is required now */
+                // Sort alt sub rules by targ GID
                 return aa->targ->gid < bb->targ->gid;
             } else {
-                return false;
+                return aa->targ->gid < bb->targ->gid;
             }
         }
     } cmpNode;
@@ -2997,7 +2997,7 @@ void FeatCtx::aaltCreate() {
         /* rule's targ GID, then the SingleSub rule sinks to the bottom of */
         /* the SingleSub rules, and becomes part of the AltSub rules       */
         /* section:                                                        */
-        for (auto si = sortTmp.begin(); si != single_end; si++) {
+        for (auto si = single_end-1; si >= sortTmp.begin(); si--) {
             auto search = aalt.rules.find((*si)->repl->gid);
             if ( search != aalt.rules.end() && is_mult_class(search->second.repl) ) {
                 single_end--;
@@ -3050,7 +3050,7 @@ void FeatCtx::aaltCreate() {
         GSUBLookupBegin(g, GSUBAlternate, 0, labelAlternate, aalt.useExtension, 0);
         for (auto i = single_end; i != sortTmp.end(); i++) {
             aaltRuleSort(&(*i)->repl);  // sort alts in order of feature def
-                                       // in aalt feature
+                                        // in aalt feature
             GSUBRuleAdd(g, (*i)->targ, (*i)->repl);
         }
         GSUBLookupEnd(g, aalt_);

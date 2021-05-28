@@ -57,6 +57,14 @@ These options can be added to the end of the first CMake command above:
 5. More recent versions of Visual Studio (e.g. 2019) should recognize `CMakeLists.txt` files. Just open the main project folder.
 6. To add a sanitizer add `-DADD_SANITIZER=[san]`, where `[san]` is `address`, `memory`, etc. (Currently only works with compilers that support GCC-style directives.)
 
+## Tests
+
+Tests for both the C and Python programs are written in the Python `pytest` framework. If you have installed the `afdko` package using `pip` (or an equivalent) you can make `tests` your working directory and run `python -m pytest` to run the tests.
+
+You can also run the tests before installation using CMake's `ctest` program or the `test` build target, assuming that you have both Python 3 and the `pytest` package installed. (For example, if you are building with ninja you can run `ninja test`.) Using `ctest` you can run the tests for one or more individual programs but not at a finer grain.
+
+To run the tests manually/individually before installation you need to set a few environment variables. If the repository directory is `[AFDKO]` and the CMake build directory is `[AFDKO]/build` then the compiled programs will be in `[AFDKO]/build/bin`. Add this to the front of the `PATH` environment variable. Then add `[AFDKO]/python` to the front of the `PYTHONPATH` environment variable. Finally set the `AFDKO_TEST_SKIP_CONSOLE` variable to `True`. (The latter allows the tests to succeed without `console_script` wrappers for the Python EntryPoints.) The tests should now succeed or fail based on the current status of the build and python file changes.
+
 ## Troubleshooting
 
 You may have trouble building the Antlr 4 Cpp runtime on Windows due to git
@@ -73,7 +81,7 @@ git config --system core.longpaths true
 ```
 
 #### Document Version History
-Version 1.0.0  
-Version 1.2.0 July 18 2019  
-Version 1.2.1 - Convert to Markdown, update content - October 2019  
-Version 1.3.0 - Document switch to CMake-driven builds
+Version 1.0.0
+Version 1.2.0 July 18 2019
+Version 1.2.1 - Convert to Markdown, update content - October 2019
+Version 1.3.0 - Document switch to CMake-driven builds - May 2021

@@ -23,4 +23,5 @@ exclude =
     **/pdflib/pdfgeom.py,
     **/pdflib/pdfutils.py,
     **/pdflib/ttfpdf.py,
+    build,
     ./venv*

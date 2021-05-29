@@ -495,10 +495,10 @@ glyph:
 ;
 
 glyphName:
-    ESCGNAME | NAMELABEL | EXTNAME
+    ESCGNAME | NAMELABEL | EXTNAME | NOTDEF
 ;
 
-label: // XXX add conditional keywords
+label:
     NAMELABEL
 ;
 

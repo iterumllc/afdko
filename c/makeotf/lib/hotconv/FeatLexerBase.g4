@@ -1,5 +1,5 @@
 /* Copyright 2021 Adobe Systems Incorporated (http://www.adobe.com/). All Rights Reserved.
- * This software is licensed as OpenSource, under the Apache License, Version 2.0. 
+ * This software is licensed as OpenSource, under the Apache License, Version 2.0.
  * This license is available at: http://opensource.org/licenses/Apache-2.0.
  */
 
@@ -19,6 +19,7 @@ LANGSYS                 : 'languagesystem' ;
 SUBTABLE                : 'subtable';
 LOOKUP                  : 'lookup' ;
 LOOKUPFLAG              : 'lookupflag' ;
+NOTDEF                  : '.notdef' ;
 
 RIGHT_TO_LEFT           : 'RightToLeft' ;
 IGNORE_BASE_GLYPHS      : 'IgnoreBaseGlyphs' ;
@@ -48,7 +49,7 @@ REVERSE                 : 'reversesub' ;
 REVERSE_v               : 'rsub' ;
 BY                      : 'by' ;
 FROM                    : 'from' ;
-POSITION                : 'position' ; 
+POSITION                : 'position' ;
 POSITION_v              : 'pos';
 PARAMETERS              : 'parameters' ;
 FEATURE_NAMES           : 'featureNames' ;
@@ -148,13 +149,13 @@ MARKER                  : '\'' ;
 COMMA                   : ',' ;
 QUOTE                   : '"' -> pushMode(String) ;
 
-fragment GNST           : 'A' .. 'Z' | 'a' .. 'z' | '_' | '.' ;
-fragment LCHR           : GNST | '0' .. '9' ;
+fragment GNST           : 'A' .. 'Z' | 'a' .. 'z' | '_' ;
+fragment LCHR           : GNST | '0' .. '9' | '.' ;
 fragment GCCHR          : LCHR | '-' ;
-GCLASS                  : '@' GCCHR+ ;
+GCLASS                  : '@' GNST GCCHR* ;
 
 CID                     : '\\' ( '0' .. '9' )+ ;
-fragment GNCHR          : GCCHR | '+' | '*' | ':' | '~' | '^' | '|' ; // XXX ! -> |
+fragment GNCHR          : GCCHR | '+' | '*' | ':' | '~' | '^' | '|' ;
 ESCGNAME                : '\\' GNST GNCHR* ;
 NAMELABEL               : GNST LCHR* ;
 EXTNAME                 : GNST GNCHR* ;
@@ -163,9 +164,9 @@ NUMEXT                  : '0x' ( '0' .. '9' | 'a' .. 'f' | 'A' .. 'F' )+ ;
 NUMOCT                  : '0' ( '0' .. '7' )+ ;
 NUM                     : '-'? ( '1' .. '9' ( '0' .. '9' )* | '0' ) ;
 fragment TSTART         :  '!' | '$' | '%' | '&' | '*' | '+' | '.' | ':' | '?' |
-                           'A' .. 'Z' | '^' .. 'z' | '|' | '~' ; // XXX Reduced character set
+                           'A' .. 'Z' | '^' .. 'z' | '|' | '~' ;
 fragment TCHR           : TSTART | '0' .. '9' | '-' ;
-CATCHTAG                : TSTART TCHR? ; // XXX can't start tag with digit
+CATCHTAG                : TSTART TCHR? ;
 
 mode Include;
 

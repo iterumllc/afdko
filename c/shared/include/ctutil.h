@@ -7,7 +7,7 @@
 
 #include "ctlshare.h"
 
-#define CTU_VERSION CTL_MAKE_VERSION(2, 0, 2)
+#define CTU_VERSION CTL_MAKE_VERSION(2, 0, 3)
 
 #include <stddef.h> /* For size_t */
 #include <stdio.h>  /* For size_t */

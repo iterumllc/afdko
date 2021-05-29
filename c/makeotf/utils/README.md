@@ -13,9 +13,3 @@ To run the script:
 ```bash
 $ python3 generate_uniblock.py > ../source/hotconv/uniblock.h
 ```
-
-## hotpccts
-
-This directory contains the code for the pccts (Antlr 1) parser generator
-and the Feature File grammar source file. See `readme.txt` in that directory
-for more information.

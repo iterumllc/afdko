@@ -1557,6 +1557,8 @@ void FeatVisitor::addGCLiteralToCurrentGC(FeatParser::GcLiteralContext *ctx) {
                     if ( hpos == std::string::npos ) {
                         gid = getGlyph(g, false);  // For error
                         assert(gid == GID_NOTDEF);
+                        // Add notdef so processing can continue
+                        fc->addGlyphToCurrentGC(gid);
                         return;
                     }
                     auto sgname = gn.substr(0, hpos);

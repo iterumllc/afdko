@@ -593,6 +593,7 @@ void FeatCtx::addGlyphClassToCurrentGC(const std::string &subGCName) {
 
     if ( search == namedGlyphClasses.end() ) {
         featMsg(hotERROR, "glyph class not defined");
+        addGlyphToCurrentGC(GID_NOTDEF);
         return;
     }
 
@@ -1279,7 +1280,7 @@ void FeatCtx::startLookup(const std::string &name, bool isTopLevel) {
 }
 
 void FeatCtx::endLookup() {
-    if ( curr.feature == aalt_ && curr.feature == size_)
+    if ( curr.feature == aalt_ || curr.feature == size_)
         return;
 
     NamedLkp *c = lab2NamedLkp(currNamedLkp);
